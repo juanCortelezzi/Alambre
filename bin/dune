@@ -1,0 +1,4 @@
+(executable
+ (public_name alambre)
+ (name main)
+ (libraries alambre))
