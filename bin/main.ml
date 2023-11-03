@@ -17,6 +17,8 @@ and builtin =
   | Status
   | Split
   | Map
+  | ParseInt
+  | Trim
 
 let rec token_to_string t =
   match t with
@@ -38,6 +40,8 @@ and builtin_to_string b =
   | Status -> "status"
   | Split -> "split"
   | Map -> "map"
+  | ParseInt -> "parseInt"
+  | Trim -> "trim"
 ;;
 
 type runner =
@@ -94,6 +98,16 @@ and execute_builtin stack b =
      | Function program :: List arr :: rest -> Ok (alambre_map arr program :: rest)
      | _ :: _ :: _ -> Error "trying to fn something that should not be fned"
      | _ -> Error (error_not_enough_elements b))
+  | ParseInt ->
+    (match stack with
+     | String s :: rest -> alambre_parse_int s |> Result.map ~f:(fun v -> v :: rest)
+     | _ :: _ -> Error "trying to parseInt something that should not be parsed"
+     | _ -> Error (error_not_enough_elements b))
+  | Trim ->
+    (match stack with
+     | String s :: rest -> Ok (alambre_trim s :: rest)
+     | _ :: _ -> Error "trying to trim something that should not be trimmed"
+     | _ -> Error (error_not_enough_elements b))
   | Status -> Ok (alambre_status stack) |> Result.map ~f:(fun _ -> stack)
 
 and alambre_status stack =
@@ -105,6 +119,13 @@ and alambre_status stack =
 and alambre_add a b = Int (a + b)
 and alambre_sub a b = Int (b - a)
 and alambre_split s at = List (String.split ~on:at s |> List.map ~f:(fun s -> String s))
+
+and alambre_parse_int s =
+  Int.of_string_opt s
+  |> Result.of_option ~error:"Could not parse string to int"
+  |> Result.map ~f:(fun i -> Int i)
+
+and alambre_trim s = String (String.strip s)
 
 and alambre_map arr program =
   let f d =
@@ -118,8 +139,12 @@ and alambre_map arr program =
 let () =
   (* let falopa = {|"1 2 3 4" 8 3 status sub status|} in *)
   let program =
-    [ DataType (List [ Int 1; Int 2 ])
-    ; DataType (Function [ DataType (Int 1); Builtin Add ])
+    [ DataType (String "  1 , 2, 3  ,4   ")
+    ; DataType (String ",")
+    ; Builtin Status
+    ; Builtin Split
+    ; DataType
+        (Function [ Builtin Trim; Builtin ParseInt; DataType (Int 1); Builtin Add ])
     ; Builtin Status
     ; Builtin Map
     ; Builtin Status
