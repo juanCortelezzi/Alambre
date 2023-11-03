@@ -1,2 +1,3 @@
 (library
- (name alambre))
+ (name alambre)
+ (libraries base))
