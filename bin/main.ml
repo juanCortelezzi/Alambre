@@ -17,7 +17,7 @@ and builtin =
   | Status
   | Split
   | Map
-  | ParseInt
+  | ToInt
   | Trim
 
 let rec token_to_string t =
@@ -40,7 +40,7 @@ and builtin_to_string b =
   | Status -> "status"
   | Split -> "split"
   | Map -> "map"
-  | ParseInt -> "parseInt"
+  | ToInt -> "to_int"
   | Trim -> "trim"
 ;;
 
@@ -98,7 +98,7 @@ and execute_builtin stack b =
      | Function program :: List arr :: rest -> Ok (alambre_map arr program :: rest)
      | _ :: _ :: _ -> Error "trying to fn something that should not be fned"
      | _ -> Error (error_not_enough_elements b))
-  | ParseInt ->
+  | ToInt ->
     (match stack with
      | String s :: rest -> alambre_parse_int s |> Result.map ~f:(fun v -> v :: rest)
      | _ :: _ -> Error "trying to parseInt something that should not be parsed"
@@ -137,14 +137,12 @@ and alambre_map arr program =
 ;;
 
 let () =
-  (* let falopa = {|"1 2 3 4" 8 3 status sub status|} in *)
+  (* "1 a 3 b" " " split (to_int) map # => [Ok(1), Err(), Ok(3), Err()] *)
   let program =
-    [ DataType (String "  1 , 2, 3  ,4   ")
-    ; DataType (String ",")
-    ; Builtin Status
+    [ DataType (String "1 2 3")
+    ; DataType (String " ")
     ; Builtin Split
-    ; DataType
-        (Function [ Builtin Trim; Builtin ParseInt; DataType (Int 1); Builtin Add ])
+    ; DataType (Function [ Builtin ToInt ])
     ; Builtin Status
     ; Builtin Map
     ; Builtin Status

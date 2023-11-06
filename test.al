@@ -1,52 +1,16 @@
-# input "hello world!"
-print a:input
-# prints "hello world!" to stdout
+"1" parseInt
+"1 a 3 b" " " split # => ["1", "a", "3", "b"]
+"1 a 3 b" " " split (to_int) map # => [Ok(1), Err(), Ok(3), Err()]
+"1 a 3 b" " " split (to_int) map flat # => [1, 3]
+"1 a 3 b" " " split (to_int 0 ordefault) map # => [1, 0, 3, 0]
+"1 a 3 b" " " split (to_int 0 ordefault (1 +) map) map # => [2, 0, 4, 0]
 
-# input "5"
-parse_int base:10 str:input
-# output 5
+# =========
+# functions
+# =========
 
-# input "hello\nthere"
-split on:"\n" str:input
-# output [ "hello", "there" ]
+work = (string on def)::(
+  string on split (parseInt def ordefault) map
+)
 
-# input "hello\n\nthere"
-split on:"\n\n" str:input
-# output [ "hello", "there" ]
-
-# input "hello, there"
-split on:"," str:input
-# output [ "hello", " there" ]
-
-# input "hello there"
-split on:" " str:input
-# output [ "hello", "there" ]
-
-# input "1 2 3"
-map f:(parse_int base:10) iter:(split on:" " str:(trim str:input))
-# output [ 1, 2, 3 ]
-
-map 
-  f:(parse_int base:10) 
-  iter:(
-    split on:" " str:(trim str:input)
-  )
-
-input
-  |> trim str:_ 
-  |> split on:"" str:_ 
-  |> map f:(parse_int base:10 str:_) iter:_
-
-  str:input trim on:"" split (str:_ base:10 parse_int) map
-
-# input "\t 1\t  "
-trim str:input
-# output "1"
-
-# input "\t 1\t  "
-trim_left str:input
-# output "1\t  "
-
-# input "\t 1\t  "
-trim_right str:input
-# output "\t 1"
+string:"1 a 3 b" on:" " def:0 work # => [1, 0, 3, 0]
