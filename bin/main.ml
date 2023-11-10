@@ -24,6 +24,7 @@ and builtin =
   | Map
   | ToInt
   | Trim
+  | OrElse
 
 let rec token_to_string t =
   match t with
@@ -51,6 +52,7 @@ and builtin_to_string b =
   | Map -> "map"
   | ToInt -> "to_int"
   | Trim -> "trim"
+  | OrElse -> "orelse"
 ;;
 
 type runner =
@@ -118,6 +120,11 @@ and execute_builtin stack b =
      | String s :: rest -> Ok (alambre_trim s :: rest)
      | _ :: _ -> Error "trying to trim something that should not be trimmed"
      | _ -> Error (error_not_enough_elements b))
+  | OrElse ->
+    (match stack with
+     | Can res :: def :: rest -> Ok (alambre_orelse res def :: rest)
+     | _ :: _ -> Error "trying to orelse something that should not be orelsed"
+     | _ -> Error (error_not_enough_elements b))
   | Status -> Ok (alambre_status stack) |> Result.map ~f:(fun _ -> stack)
 
 and alambre_status stack =
@@ -135,6 +142,12 @@ and alambre_to_int s =
   |> Option.value_map ~default:(Can Worm) ~f:(fun i -> Can (Data (Int i)))
 
 and alambre_trim s = String (String.strip s)
+
+and alambre_orelse res def =
+  Stdlib.print_endline (data_type_to_string def);
+  match res with
+  | Data d -> d
+  | Worm -> def
 
 and alambre_arr_map arr program =
   Stdlib.print_endline "arr_map";
@@ -154,7 +167,7 @@ and alambre_res_map res program =
 ;;
 
 let () =
-  (* "1 a 3 b" " " split (to_int (1 +) map) map *)
+  (* "1 a 3 b" " " split (to_int (1 +) map (0 orelse) map) map # => [2, 0, 4, 0] *)
   let program =
     [ DataType (String "1 df 3")
     ; DataType (String " ")
@@ -164,6 +177,8 @@ let () =
            [ Builtin ToInt
            ; DataType (Function [ DataType (Int 1); Builtin Add ])
            ; Builtin Status
+           ; Builtin Map
+           ; DataType (Function [ DataType (Int 0); Builtin Status; Builtin OrElse ])
            ; Builtin Map
            ])
     ; Builtin Status
