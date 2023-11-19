@@ -1,6 +1,20 @@
-(executable
- (public_name alambre)
- (name main)
- (libraries alambre base)
- (flags (:standard -w -37-69-32-33))
+(executables
+  (public_names alm almrepl)
+  (names alm almrepl)
+  (libraries alambre base)
+  (flags (:standard -w -37-69-32-33))
 )
+
+; (executable
+;   (public_name alm)
+;   (name alm)
+;   (libraries alambre base)
+;   (flags (:standard -w -37-69-32-33))
+; )
+;
+; (executable
+;   (public_name almrepl)
+;   (name almrepl)
+;   (libraries alambre base)
+;   (flags (:standard -w -37-69-32-33))
+; )

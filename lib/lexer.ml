@@ -55,15 +55,20 @@ let rec next_token l : t * Token.t =
   | Some '+' -> advance l, Builtin Add
   | Some '-' -> advance l, Builtin Sub
   | Some '/' -> advance l, Builtin Div
-  | Some '(' -> read_function l
-  | Some '\'' -> read_string l
+  | Some '(' -> advance l, LParen
+  | Some ')' -> advance l, RParen
+  | Some '{' -> advance l, LCurly
+  | Some '}' -> advance l, RCurly
+  | Some ',' -> advance l, Comma
+  | Some '"' -> read_string l
   | Some ch when is_digit ch -> read_digit l
   | Some ch when is_char ch -> read_ident l
+  | Some ch -> advance l, Illegal ch
   | _ -> l, EOF
 
 and read_digit l =
   let new_lexer, digit_str = read_while ~f:is_digit l in
-  new_lexer, Token.DataType (Int (Int.of_string digit_str))
+  new_lexer, Token.Int (Int.of_string digit_str)
 
 and read_ident l =
   let new_lexer, ident = read_while ~f:is_char l in
@@ -75,41 +80,10 @@ and read_string l =
   let intermediate_lexer, inside_string =
     (* read_while reads until the ' that means that we need to advance the lexer
        to cover the whole string syntax from ' to ' *)
-    read_while ~f:(fun c -> Char.equal '\'' c |> not) (advance l)
+    read_while ~f:(fun c -> Char.equal '"' c |> not) (advance l)
   in
   let new_lexer = advance intermediate_lexer in
-  new_lexer, Token.DataType (String inside_string)
-
-and read_function l =
-  let rec read_between_parens lex ~counter =
-    let lex, counter =
-      match lex.ch with
-      | Some '(' -> advance lex, counter + 1
-      | Some ')' -> advance lex, counter - 1
-      | None -> failwith "unbalanced parentheses"
-      | _ -> advance lex, counter
-    in
-    if counter = 0 then lex else read_between_parens lex ~counter
-  in
-  let new_lexer = read_between_parens l ~counter:0 in
-  let fn_program = String.sub l.input ~pos:(l.pos + 1) ~len:(new_lexer.pos - l.pos - 2) in
-  let rec loop fn_lexer ~fn_tokens =
-    let new_lex, token = next_token fn_lexer in
-    match token with
-    | EOF -> List.rev fn_tokens
-    | _ -> loop new_lex ~fn_tokens:(token :: fn_tokens)
-  in
-  let fn_tokens = loop (create fn_program) ~fn_tokens:[] in
-  new_lexer, Token.DataType (Function fn_tokens)
-;;
-
-let%test_unit "read_function" =
-  let input = "(1 +) map" in
-  let expected_l = { input; pos = 5; read_pos = 6; ch = Some ' ' } in
-  let expected = Token.DataType (Function [ DataType (Int 1); Builtin Add ]) in
-  let l = create input in
-  let new_lexer, fn_tokens = read_function l in
-  [%test_result: t] new_lexer ~expect:expected_l
+  new_lexer, String inside_string
 ;;
 
 let%test_unit "read_while_str" =
@@ -145,15 +119,7 @@ let%test_unit "read_while_int" =
 
 let%test_unit "math operators" =
   let input = "1 2 + 20 *" in
-  let tokens =
-    [ Token.DataType (Token.Int 1)
-    ; Token.DataType (Token.Int 2)
-    ; Token.Builtin Token.Add
-    ; Token.DataType (Token.Int 20)
-    ; Token.Builtin Token.Mul
-    ; Token.EOF
-    ]
-  in
+  let tokens = [ Token.Int 1; Int 2; Builtin Add; Int 20; Builtin Mul; EOF ] in
   let rec loop index lexer =
     let new_lexer, token = next_token lexer in
     let expected_token = List.nth tokens index in
@@ -169,11 +135,7 @@ let%test_unit "math operators" =
 let%test_unit "function" =
   let input = "(1 + 10 *) map" in
   let tokens =
-    [ Token.DataType
-        (Function [ DataType (Int 1); Builtin Add; DataType (Int 10); Builtin Mul ])
-    ; Token.Builtin Map
-    ; Token.EOF
-    ]
+    [ Token.LParen; Int 1; Builtin Add; Int 10; Builtin Mul; RParen; Builtin Map; EOF ]
   in
   let rec loop index lexer =
     let new_lexer, token = next_token lexer in
@@ -189,7 +151,7 @@ let%test_unit "function" =
 
 let%test_unit "strings" =
   let input = "'hello there' map" in
-  let tokens = [ Token.DataType (String "hello there"); Token.Builtin Map; Token.EOF ] in
+  let tokens = [ Token.String "hello there"; Token.Builtin Map; Token.EOF ] in
   let rec loop index lexer =
     let new_lexer, token = next_token lexer in
     let expected_token = List.nth tokens index in
