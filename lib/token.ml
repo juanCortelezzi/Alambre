@@ -9,6 +9,15 @@ type t =
   | RParen
   | LCurly
   | RCurly
+  | GT
+  | LT
+  | GTE
+  | LTE
+  | Equal
+  | NotEqual
+  | Not
+  | And
+  | Or
   | Comma
   | EOF
 [@@deriving sexp, compare]
@@ -34,8 +43,8 @@ let lookup_builtin s =
   | "status" -> Some Status
   | "split" -> Some Split
   | "map" -> Some Map
-  | "filter" -> Some Map
-  | "reduce" -> Some Map
+  | "filter" -> Some Filter
+  | "reduce" -> Some Reduce
   | "to_int" -> Some ToInt
   | "trim" -> Some Trim
   | "rtrim" -> Some RTrim
@@ -48,11 +57,20 @@ let to_string t =
   match t with
   | Int i -> Int.to_string i
   | String s -> "'" ^ s ^ "'"
-  | LParen -> "("
-  | RParen -> ")"
-  | LCurly -> "{"
-  | RCurly -> "}"
-  | Comma -> ","
+  | LParen -> "LParen"
+  | RParen -> "RParen"
+  | LCurly -> "LCurly"
+  | RCurly -> "RCurly"
+  | Comma -> "Comma"
+  | GT -> "GT"
+  | LT -> "LT"
+  | GTE -> "GTE"
+  | LTE -> "LTE"
+  | Equal -> "Equal"
+  | NotEqual -> "NotEqual"
+  | Not -> "Not"
+  | And -> "And"
+  | Or -> "Or"
   | EOF -> "EOF"
   | Illegal c -> "Illegal `" ^ String.of_char c ^ "`"
   | Builtin b ->

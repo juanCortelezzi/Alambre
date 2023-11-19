@@ -21,7 +21,6 @@ let advance l =
       { l with pos = input_len; read_pos = input_len + 1; ch = None })
     else { l with pos = l.read_pos; read_pos = l.read_pos + 1; ch }
   in
-  (* Stdlib.print_endline (sexp_of_t new_lexer |> Sexp.to_string_hum); *)
   new_lexer
 ;;
 
@@ -33,7 +32,12 @@ let rec skip_whitespace l =
   | _ -> l
 ;;
 
-let peek l = string_get_opt l.input l.read_pos
+let peek_is l ~value =
+  match string_get_opt l.input l.read_pos, value with
+  | Some a, Some b -> Char.equal a b
+  | None, None -> true
+  | _ -> false
+;;
 
 let read_while ~f l =
   let rec loop f l =
@@ -60,6 +64,15 @@ let rec next_token l : t * Token.t =
   | Some '{' -> advance l, LCurly
   | Some '}' -> advance l, RCurly
   | Some ',' -> advance l, Comma
+  | Some '=' when peek_is l ~value:(Some '=') -> advance (advance l), Equal
+  | Some '!' when peek_is l ~value:(Some '=') -> advance (advance l), NotEqual
+  | Some '!' -> advance l, Not
+  | Some '>' when peek_is l ~value:(Some '=') -> advance (advance l), GTE
+  | Some '>' -> advance l, GT
+  | Some '<' when peek_is l ~value:(Some '=') -> advance (advance l), LTE
+  | Some '<' -> advance l, LT
+  | Some '&' when peek_is l ~value:(Some '&') -> advance (advance l), And
+  | Some '|' when peek_is l ~value:(Some '|') -> advance (advance l), Or
   | Some '"' -> read_string l
   | Some ch when is_digit ch -> read_digit l
   | Some ch when is_char ch -> read_ident l
@@ -150,8 +163,61 @@ let%test_unit "function" =
 ;;
 
 let%test_unit "strings" =
-  let input = "'hello there' map" in
+  let input = {|"hello there" map|} in
   let tokens = [ Token.String "hello there"; Token.Builtin Map; Token.EOF ] in
+  let rec loop index lexer =
+    let new_lexer, token = next_token lexer in
+    let expected_token = List.nth tokens index in
+    match expected_token with
+    | Some t ->
+      [%test_result: Token.t] token ~expect:t;
+      loop (index + 1) new_lexer
+    | None -> ()
+  in
+  create input |> loop 0 |> ignore
+;;
+
+let%test_unit "test_all_tokens" =
+  let input =
+    {|
+  + - * / !
+  >= > <= < != == && ||
+  ( ) { } ,
+  5 10 20
+  "hello there"
+  map split filter reduce
+  |}
+  in
+  let tokens =
+    [ Token.Builtin Add
+    ; Builtin Sub
+    ; Builtin Mul
+    ; Builtin Div
+    ; Not
+    ; GTE
+    ; GT
+    ; LTE
+    ; LT
+    ; NotEqual
+    ; Equal
+    ; And
+    ; Or
+    ; LParen
+    ; RParen
+    ; LCurly
+    ; RCurly
+    ; Comma
+    ; Int 5
+    ; Int 10
+    ; Int 20
+    ; String "hello there"
+    ; Builtin Map
+    ; Builtin Split
+    ; Builtin Filter
+    ; Builtin Reduce
+    ; EOF
+    ]
+  in
   let rec loop index lexer =
     let new_lexer, token = next_token lexer in
     let expected_token = List.nth tokens index in

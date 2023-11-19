@@ -167,7 +167,6 @@ and alambre_res_map res program =
 ;;
 
 let () =
-  (* "1 a 3 b" " " split (to_int (1 +) map (0 orelse) map) map # => [2, 0, 4, 0] *)
   let program =
     [ DataType (String "1 df 3")
     ; DataType (String " ")
