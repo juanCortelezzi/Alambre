@@ -12,6 +12,22 @@ let string_get_opt s i =
   if i >= String.length s then None else Some (String.unsafe_get s i)
 ;;
 
+let lookup_builtin s =
+  let open Token in
+  match s with
+  | "status" -> Some Status
+  | "split" -> Some Split
+  | "map" -> Some Map
+  | "filter" -> Some Filter
+  | "reduce" -> Some Reduce
+  | "to_int" -> Some ToInt
+  | "trim" -> Some Trim
+  | "rtrim" -> Some RTrim
+  | "ltrim" -> Some LTrim
+  | "or_else" -> Some OrElse
+  | _ -> None
+;;
+
 let advance l =
   let ch = string_get_opt l.input l.read_pos in
   let new_lexer =
@@ -64,19 +80,19 @@ let rec next_token l : t * Token.t =
   | Some '{' -> advance l, LCurly
   | Some '}' -> advance l, RCurly
   | Some ',' -> advance l, Comma
-  | Some '=' when peek_is l ~value:(Some '=') -> advance (advance l), Equal
-  | Some '!' when peek_is l ~value:(Some '=') -> advance (advance l), NotEqual
-  | Some '!' -> advance l, Not
-  | Some '>' when peek_is l ~value:(Some '=') -> advance (advance l), GTE
-  | Some '>' -> advance l, GT
-  | Some '<' when peek_is l ~value:(Some '=') -> advance (advance l), LTE
-  | Some '<' -> advance l, LT
-  | Some '&' when peek_is l ~value:(Some '&') -> advance (advance l), And
-  | Some '|' when peek_is l ~value:(Some '|') -> advance (advance l), Or
+  | Some '=' -> advance l, Builtin Equal
+  | Some '!' when peek_is l ~value:(Some '=') -> advance (advance l), Builtin NotEqual
+  | Some '!' -> advance l, Builtin Not
+  | Some '>' when peek_is l ~value:(Some '=') -> advance (advance l), Builtin GTE
+  | Some '>' -> advance l, Builtin GT
+  | Some '<' when peek_is l ~value:(Some '=') -> advance (advance l), Builtin LTE
+  | Some '<' -> advance l, Builtin LT
+  | Some '&' when peek_is l ~value:(Some '&') -> advance (advance l), Builtin And
+  | Some '|' when peek_is l ~value:(Some '|') -> advance (advance l), Builtin Or
   | Some '"' -> read_string l
   | Some ch when is_digit ch -> read_digit l
   | Some ch when is_char ch -> read_ident l
-  | Some ch -> advance l, Illegal ch
+  | Some ch -> advance l, Illegal (String.of_char ch)
   | _ -> l, EOF
 
 and read_digit l =
@@ -85,9 +101,9 @@ and read_digit l =
 
 and read_ident l =
   let new_lexer, ident = read_while ~f:is_char l in
-  match Token.lookup_builtin ident with
+  match lookup_builtin ident with
   | Some builtin -> new_lexer, Builtin builtin
-  | None -> failwith "Not implemented yet!"
+  | None -> new_lexer, Token.Illegal ident
 
 and read_string l =
   let intermediate_lexer, inside_string =
@@ -181,7 +197,7 @@ let%test_unit "test_all_tokens" =
   let input =
     {|
   + - * / !
-  >= > <= < != == && ||
+  >= > <= < != = && ||
   ( ) { } ,
   5 10 20
   "hello there"
@@ -193,15 +209,15 @@ let%test_unit "test_all_tokens" =
     ; Builtin Sub
     ; Builtin Mul
     ; Builtin Div
-    ; Not
-    ; GTE
-    ; GT
-    ; LTE
-    ; LT
-    ; NotEqual
-    ; Equal
-    ; And
-    ; Or
+    ; Builtin Not
+    ; Builtin GTE
+    ; Builtin GT
+    ; Builtin LTE
+    ; Builtin LT
+    ; Builtin NotEqual
+    ; Builtin Equal
+    ; Builtin And
+    ; Builtin Or
     ; LParen
     ; RParen
     ; LCurly
