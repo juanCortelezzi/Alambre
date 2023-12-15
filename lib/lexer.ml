@@ -12,19 +12,28 @@ let string_get_opt s i =
   if i >= String.length s then None else Some (String.unsafe_get s i)
 ;;
 
+let lookup_keyword s =
+  let open Token in
+  match s with
+  | "if" -> Some If
+  | "else" -> Some Else
+  | "end" -> Some End
+  | _ -> None
+;;
+
 let lookup_builtin s =
   let open Token in
   match s with
-  | "status" -> Some Status
-  | "split" -> Some Split
-  | "map" -> Some Map
-  | "filter" -> Some Filter
-  | "reduce" -> Some Reduce
-  | "to_int" -> Some ToInt
-  | "trim" -> Some Trim
-  | "rtrim" -> Some RTrim
-  | "ltrim" -> Some LTrim
-  | "or_else" -> Some OrElse
+  | "status" -> Some (Builtin Status)
+  | "split" -> Some (Builtin Split)
+  | "map" -> Some (Builtin Map)
+  | "filter" -> Some (Builtin Filter)
+  | "reduce" -> Some (Builtin Reduce)
+  | "to_int" -> Some (Builtin ToInt)
+  | "trim" -> Some (Builtin Trim)
+  | "rtrim" -> Some (Builtin RTrim)
+  | "ltrim" -> Some (Builtin LTrim)
+  | "or_else" -> Some (Builtin OrElse)
   | _ -> None
 ;;
 
@@ -102,8 +111,11 @@ and read_digit l =
 and read_ident l =
   let new_lexer, ident = read_while ~f:is_char l in
   match lookup_builtin ident with
-  | Some builtin -> new_lexer, Builtin builtin
-  | None -> new_lexer, Token.Illegal ident
+  | Some builtin -> new_lexer, builtin
+  | None ->
+    (match lookup_keyword ident with
+     | Some keyword -> new_lexer, keyword
+     | None -> new_lexer, Token.Illegal ident)
 
 and read_string l =
   let intermediate_lexer, inside_string =
@@ -202,6 +214,7 @@ let%test_unit "test_all_tokens" =
   5 10 20
   "hello there"
   map split filter reduce
+  if end if else end
   |}
   in
   let tokens =
@@ -231,6 +244,11 @@ let%test_unit "test_all_tokens" =
     ; Builtin Split
     ; Builtin Filter
     ; Builtin Reduce
+    ; If
+    ; End
+    ; If
+    ; Else
+    ; End
     ; EOF
     ]
   in

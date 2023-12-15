@@ -3,7 +3,7 @@ open Base
 let usage = {|almrepl <program>|}
 let get_args () = Sys.get_argv () |> Array.to_list |> List.tl |> Option.value_exn
 
-let repl input =
+let lexer_repl input =
   let open Alambre in
   let rec loop index lexer =
     let new_lexer, token = Lexer.next_token lexer in
@@ -15,9 +15,17 @@ let repl input =
   Lexer.create input |> loop 0
 ;;
 
+let parser_repl input =
+  let open Alambre in
+  let parser = Parser.create (Lexer.create input) in
+  let ast = Parser.get_ast parser |> Result.ok_or_failwith in
+  sexp_of_list Ast.sexp_of_t ast |> Sexp.to_string_hum |> Stdlib.print_endline
+;;
+
 let () =
   let args = get_args () in
   match args with
-  | [ input ] -> repl input
+  | [ "lexer"; input ] -> lexer_repl input
+  | [ "parser"; input ] -> parser_repl input
   | _ -> Stdlib.print_endline usage
 ;;

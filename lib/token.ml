@@ -10,8 +10,11 @@ type t =
   | LCurly
   | RCurly
   | Comma
+  | If
+  | Else
+  | End
   | EOF
-[@@deriving sexp, compare]
+[@@deriving sexp, compare, equal]
 
 and builtin =
   | GT
@@ -47,6 +50,9 @@ let to_string t =
   | LCurly -> "LCurly"
   | RCurly -> "RCurly"
   | Comma -> "Comma"
+  | If -> "If"
+  | Else -> "Else"
+  | End -> "End"
   | EOF -> "EOF"
   | Illegal c -> "Illegal `" ^ c ^ "`"
   | Builtin b ->
