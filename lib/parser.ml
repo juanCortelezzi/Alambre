@@ -29,7 +29,7 @@ and parse_fn p =
     match parse_token p with
     | Ok (p, token) -> loop p (token :: ast)
     | Error "end" -> Error "fn has no end"
-    | Error _ when Token.equal p.token Token.RParen ->
+    | Error _ when Token.equal p.token RParen ->
       Ok (advance p, Ast.DataType (Function (List.rev ast)))
     | Error e -> Error e
   in
@@ -38,10 +38,10 @@ and parse_fn p =
 and parse_arr p =
   let rec loop p ast =
     match parse_token p with
-    | Ok (p, Ast.DataType token) -> loop p (token :: ast)
+    | Ok (p, DataType token) -> loop p (token :: ast)
     | Ok _ -> Error "value in array must be a data type"
-    | Error _ when Token.equal p.token Token.Comma -> loop (advance p) ast
-    | Error _ when Token.equal p.token Token.RCurly ->
+    | Error _ when Token.equal p.token Comma -> loop (advance p) ast
+    | Error _ when Token.equal p.token RCurly ->
       Ok (advance p, Ast.DataType (Array (List.rev ast)))
     | Error "end" -> Error "arr has no end"
     | Error e -> Error e

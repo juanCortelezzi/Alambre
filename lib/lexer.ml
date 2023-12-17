@@ -39,14 +39,11 @@ let lookup_builtin s =
 
 let advance l =
   let ch = string_get_opt l.input l.read_pos in
-  let new_lexer =
-    if Option.is_none ch
-    then (
-      let input_len = String.length l.input in
-      { l with pos = input_len; read_pos = input_len + 1; ch = None })
-    else { l with pos = l.read_pos; read_pos = l.read_pos + 1; ch }
-  in
-  new_lexer
+  if Option.is_none ch
+  then (
+    let input_len = String.length l.input in
+    { l with pos = input_len; read_pos = input_len + 1; ch = None })
+  else { l with pos = l.read_pos; read_pos = l.read_pos + 1; ch }
 ;;
 
 let create input = { input; pos = 0; read_pos = 0; ch = None } |> advance

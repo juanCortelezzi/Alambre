@@ -2,32 +2,29 @@ open Base
 
 type t =
   { stack : Ast.data_type list
-  ; program : Ast.t list
+  ; ast : Ast.t list
   ; index : int
   }
 
-let create ?(stack = []) program = { stack; program; index = 0 }
+let create ?(stack = []) ast = { stack; ast; index = 0 }
 
-let rec run (r : t) : t =
-  let step (run : t) =
-    match List.nth run.program run.index with
+let rec run t =
+  let step t =
+    match List.nth t.ast t.index with
     | None -> failwith "index out of bounds"
     | Some token ->
       (match token with
-       | Ast.DataType d -> Ok { run with stack = d :: run.stack; index = run.index + 1 }
-       | Ast.Builtin b ->
-         execute_builtin run.stack b
-         |> Result.map ~f:(fun stack -> { run with stack; index = run.index + 1 })
+       | DataType d -> Ok { t with stack = d :: t.stack; index = t.index + 1 }
+       | Builtin b ->
+         execute_builtin t.stack b
+         |> Result.map ~f:(fun stack -> { t with stack; index = t.index + 1 })
        | _ -> failwith "Ast token not implemented")
   in
-  let rec loop (r : t) : t =
-    match step r with
-    | Ok r -> if r.index < List.length r.program then loop r else r
-    | Error e ->
-      alambre_status r.stack;
-      failwith e
-  in
-  loop r
+  match step t with
+  | Ok t -> if t.index < List.length t.ast then run t else t
+  | Error e ->
+    alambre_status t.stack;
+    failwith e
 
 and execute_builtin stack b =
   let error_not_enough_elements b =
@@ -53,10 +50,8 @@ and execute_builtin stack b =
      | _ -> Error (error_not_enough_elements b))
   | Map ->
     (match stack with
-     | Function program :: Ast.Array arr :: rest ->
-       Ok (alambre_arr_map arr program :: rest)
-     | Function program :: Ast.Maybe res :: rest ->
-       Ok (alambre_res_map res program :: rest)
+     | Function fn :: Array arr :: rest -> Ok (alambre_arr_map arr fn :: rest)
+     | Function fn :: Maybe res :: rest -> Ok (alambre_res_map res fn :: rest)
      | _ :: _ :: _ -> Error "trying to fn something that should not be fned"
      | _ -> Error (error_not_enough_elements b))
   | ToInt ->
@@ -71,7 +66,7 @@ and execute_builtin stack b =
      | _ -> Error (error_not_enough_elements b))
   | OrElse ->
     (match stack with
-     | def :: Ast.Maybe res :: rest -> Ok (alambre_orelse ~res ~def :: rest)
+     | default :: Maybe maybe :: rest -> Ok (alambre_orelse ~maybe ~default :: rest)
      | x :: _ ->
        Error
          (Printf.sprintf
@@ -87,34 +82,34 @@ and alambre_status stack =
   |> String.strip
   |> Stdlib.print_endline
 
-and alambre_add a b = Ast.Int (a + b)
-and alambre_sub a b = Ast.Int (b - a)
+and alambre_add a b = Int (a + b)
+and alambre_sub a b = Int (b - a)
 
 and alambre_split s at =
-  Ast.Array (String.split ~on:at s |> List.map ~f:(fun s -> Ast.String s))
+  Array (String.split ~on:at s |> List.map ~f:(fun s -> Ast.String s))
 
 and alambre_to_int s =
   Int.of_string_opt s
-  |> Option.value_map ~default:(Ast.Maybe Nothing) ~f:(fun i -> Ast.Maybe (Just (Int i)))
+  |> Option.value_map ~default:(Ast.Maybe Nothing) ~f:(fun i -> Maybe (Just (Int i)))
 
-and alambre_trim s = Ast.String (String.strip s)
+and alambre_trim s = String (String.strip s)
 
-and alambre_orelse ~res ~def =
-  match res with
-  | Ast.Just d -> d
-  | Ast.Nothing -> def
+and alambre_orelse ~maybe ~default =
+  match maybe with
+  | Just data -> data
+  | Nothing -> default
 
-and alambre_arr_map arr program =
+and alambre_arr_map arr fn =
   let f d =
-    let r = create program ?stack:(Some [ d ]) |> run in
-    Option.value (List.hd r.stack) ~default:Ast.Void
+    let r = create fn ?stack:(Some [ d ]) |> run in
+    Option.value (List.hd r.stack) ~default:Void
   in
-  Ast.Array (List.map ~f arr)
+  Array (List.map ~f arr)
 
-and alambre_res_map res program =
-  match res with
-  | Ast.Just d ->
-    let r = create program ?stack:(Some [ d ]) |> run in
+and alambre_res_map maybe ast =
+  match maybe with
+  | Just d ->
+    let r = create ast ?stack:(Some [ d ]) |> run in
     Maybe (Just (Option.value (List.hd r.stack) ~default:Void))
-  | Nothing -> Maybe res
+  | Nothing -> Maybe maybe
 ;;
