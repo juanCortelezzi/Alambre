@@ -22,10 +22,19 @@ let parser_repl input =
   sexp_of_list Ast.sexp_of_t ast |> Sexp.to_string_hum |> Stdlib.print_endline
 ;;
 
+let repl_repl input =
+  let open Alambre in
+  let parser = Parser.create (Lexer.create input) in
+  Executor.create (Parser.get_ast parser |> Result.ok_or_failwith)
+  |> Executor.run
+  |> ignore
+;;
+
 let () =
   let args = get_args () in
   match args with
   | [ "lexer"; input ] -> lexer_repl input
   | [ "parser"; input ] -> parser_repl input
+  | [ "repl"; input ] -> repl_repl input
   | _ -> Stdlib.print_endline usage
 ;;

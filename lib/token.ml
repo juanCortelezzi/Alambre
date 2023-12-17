@@ -41,6 +41,33 @@ and builtin =
   | LTrim
   | OrElse
 
+let builtin_to_string b =
+  match b with
+  | GT -> "GT"
+  | LT -> "LT"
+  | GTE -> "GTE"
+  | LTE -> "LTE"
+  | Equal -> "Equal"
+  | NotEqual -> "NotEqual"
+  | Not -> "Not"
+  | And -> "And"
+  | Or -> "Or"
+  | Add -> "Add"
+  | Sub -> "Sub"
+  | Mul -> "Mul"
+  | Div -> "Div"
+  | Status -> "Status"
+  | Split -> "Split"
+  | Map -> "Map"
+  | Filter -> "Filter"
+  | Reduce -> "Reduce"
+  | ToInt -> "To_int"
+  | Trim -> "Trim"
+  | RTrim -> "Rtrim"
+  | LTrim -> "Ltrim"
+  | OrElse -> "Or_else"
+;;
+
 let to_string t =
   match t with
   | Int i -> Int.to_string i
@@ -55,29 +82,5 @@ let to_string t =
   | End -> "End"
   | EOF -> "EOF"
   | Illegal c -> "Illegal `" ^ c ^ "`"
-  | Builtin b ->
-    (match b with
-     | GT -> "GT"
-     | LT -> "LT"
-     | GTE -> "GTE"
-     | LTE -> "LTE"
-     | Equal -> "Equal"
-     | NotEqual -> "NotEqual"
-     | Not -> "Not"
-     | And -> "And"
-     | Or -> "Or"
-     | Add -> "Add"
-     | Sub -> "Sub"
-     | Mul -> "Mul"
-     | Div -> "Div"
-     | Status -> "Status"
-     | Split -> "Split"
-     | Map -> "Map"
-     | Filter -> "Filter"
-     | Reduce -> "Reduce"
-     | ToInt -> "To_int"
-     | Trim -> "Trim"
-     | RTrim -> "Rtrim"
-     | LTrim -> "Ltrim"
-     | OrElse -> "Or_else")
+  | Builtin b -> builtin_to_string b
 ;;
