@@ -33,13 +33,11 @@ let rec to_string t =
 
 and data_type_to_string d =
   match d with
-  | Int i -> Printf.sprintf "Int(%d)" i
-  | String s -> Printf.sprintf "String(%s)" s
-  | Function _ -> "Function"
+  | Int i -> Printf.sprintf "%d" i
+  | String s -> Printf.sprintf "\"%s\"" s
+  | Function f -> Printf.sprintf "(%s)" (String.concat ~sep:" " (List.map ~f:to_string f))
   | Array a ->
-    Printf.sprintf
-      "Array(%s)"
-      (String.concat ~sep:", " (List.map ~f:data_type_to_string a))
+    Printf.sprintf "{%s}" (String.concat ~sep:", " (List.map ~f:data_type_to_string a))
   | Maybe m ->
     (match m with
      | Just d -> Printf.sprintf "Just(%s)" (data_type_to_string d)
@@ -49,8 +47,15 @@ and data_type_to_string d =
 and expresion_to_string e =
   match e with
   | If i ->
-    Printf.sprintf
-      "If(%s, %s)"
-      (String.concat ~sep:", " (List.map ~f:to_string i.consequence))
-      (String.concat ~sep:", " (List.map ~f:to_string i.alternative))
+    let has_alternative = List.is_empty i.alternative |> not in
+    if has_alternative
+    then
+      Printf.sprintf
+        "if %s else %s"
+        (String.concat ~sep:" " (List.map ~f:to_string i.consequence))
+        (String.concat ~sep:" " (List.map ~f:to_string i.alternative))
+    else
+      Printf.sprintf
+        "if %s"
+        (String.concat ~sep:" " (List.map ~f:to_string i.consequence))
 ;;
