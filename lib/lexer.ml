@@ -34,6 +34,7 @@ let lookup_builtin s =
   | "rtrim" -> Some (Builtin RTrim)
   | "ltrim" -> Some (Builtin LTrim)
   | "or_else" -> Some (Builtin OrElse)
+  | "print" -> Some (Builtin Print)
   | _ -> None
 ;;
 

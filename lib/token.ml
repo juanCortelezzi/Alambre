@@ -40,6 +40,7 @@ and builtin =
   | RTrim
   | LTrim
   | OrElse
+  | Print
 
 let builtin_to_string b =
   match b with
@@ -66,6 +67,7 @@ let builtin_to_string b =
   | RTrim -> "Rtrim"
   | LTrim -> "Ltrim"
   | OrElse -> "Or_else"
+  | Print -> "Print"
 ;;
 
 let to_string t =

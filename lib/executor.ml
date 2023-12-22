@@ -73,8 +73,18 @@ and execute_builtin stack b =
             "trying to orElse something that should not be orElsed `%s`"
             (Ast.data_type_to_string x))
      | _ -> Error (error_not_enough_elements b))
-  | Status -> Ok (alambre_status stack) |> Result.map ~f:(fun _ -> stack)
+  | Status ->
+    alambre_status stack;
+    Ok stack
+  | Print ->
+    alambre_print stack;
+    Ok stack
   | b -> Error (Printf.sprintf "builtin %s not implemented" (Token.builtin_to_string b))
+
+and alambre_print stack =
+  match stack with
+  | something :: rest -> Stdlib.print_endline (Ast.data_type_to_string something)
+  | _ -> Stdlib.print_endline (Ast.data_type_to_string Ast.Void)
 
 and alambre_status stack =
   List.map stack ~f:Ast.data_type_to_string
