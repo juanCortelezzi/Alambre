@@ -124,85 +124,78 @@ and read_string l =
   new_lexer, String inside_string
 ;;
 
-let%test_unit "read_while_str" =
+let collect_tokens l =
+  let rec loop l tokens =
+    let new_lexer, token = next_token l in
+    match token with
+    | EOF as token -> List.rev (token :: tokens)
+    | token -> loop new_lexer (token :: tokens)
+  in
+  loop l []
+;;
+
+let%expect_test "read_while_char_is_alpha" =
   let input = "asdfadf" in
   let input_len = String.length input in
-  let l = create input in
-  let expected_l =
-    { input = l.input; pos = input_len; read_pos = input_len + 1; ch = None }
-  in
-  let new_lexer, string = read_while ~f:Char.is_alpha l in
-  [%test_result: t] new_lexer ~expect:expected_l;
-  [%test_result: string] string ~expect:input
+  let new_lexer, string = read_while ~f:Char.is_alpha (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum (sexp_of_t new_lexer));
+  Stdlib.print_endline (Sexp.to_string_hum (String.sexp_of_t string));
+  [%expect {|
+    ((input asdfadf) (pos 7) (read_pos 8) (ch ()))
+    asdfadf
+  |}]
 ;;
 
-let%test_unit "read_while_test" =
-  let input = "'hola me llamo juan' outside" in
-  let intermediate_lexer, string =
-    read_while ~f:(fun c -> Char.equal '\'' c |> not) (create input |> advance)
-  in
-  let new_lexer = advance intermediate_lexer in
-  [%test_result: string] string ~expect:"hola me llamo juan"
+let%expect_test "read_until_string_termination" =
+  let input = "hola me llamo juan' outside" in
+  let lexer, string = read_while ~f:(fun c -> Char.equal '\'' c |> not) (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum (sexp_of_t lexer));
+  Stdlib.print_endline (Sexp.to_string_hum (String.sexp_of_t string));
+  [%expect
+    {|
+    ((input "hola me llamo juan' outside") (pos 18) (read_pos 19) (ch (')))
+    "hola me llamo juan"
+  |}]
 ;;
 
-let%test_unit "read_while_int" =
+let%expect_test "read_while_int" =
   let input = "1 2" in
   let input_len = String.length input in
-  let l = create input in
-  let expected_l = { input = l.input; pos = 1; read_pos = 2; ch = Some ' ' } in
-  let new_lexer, string = read_while ~f:is_digit l in
-  [%test_result: t] new_lexer ~expect:expected_l;
-  [%test_result: string] string ~expect:"1"
+  let new_lexer, string = read_while ~f:is_digit (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum (sexp_of_t new_lexer));
+  Stdlib.print_endline (Sexp.to_string_hum (String.sexp_of_t string));
+  [%expect {|
+    ((input "1 2") (pos 1) (read_pos 2) (ch (" ")))
+    1
+  |}]
 ;;
 
-let%test_unit "math operators" =
+let%expect_test "math operators" =
   let input = "1 2 + 20 *" in
-  let tokens = [ Token.Int 1; Int 2; Builtin Add; Int 20; Builtin Mul; EOF ] in
-  let rec loop index lexer =
-    let new_lexer, token = next_token lexer in
-    let expected_token = List.nth tokens index in
-    match expected_token with
-    | Some t ->
-      [%test_result: Token.t] token ~expect:t;
-      loop (index + 1) new_lexer
-    | None -> ()
-  in
-  create input |> loop 0 |> ignore
+  let tokens = collect_tokens (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Token.t list] tokens));
+  [%expect {| ((Int 1) (Int 2) (Builtin Add) (Int 20) (Builtin Mul) EOF) |}]
 ;;
 
-let%test_unit "function" =
+let%expect_test "function" =
   let input = "(1 + 10 *) map" in
-  let tokens =
-    [ Token.LParen; Int 1; Builtin Add; Int 10; Builtin Mul; RParen; Builtin Map; EOF ]
-  in
-  let rec loop index lexer =
-    let new_lexer, token = next_token lexer in
-    let expected_token = List.nth tokens index in
-    match expected_token with
-    | Some t ->
-      [%test_result: Token.t] token ~expect:t;
-      loop (index + 1) new_lexer
-    | None -> ()
-  in
-  create input |> loop 0 |> ignore
+  let tokens = collect_tokens (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Token.t list] tokens));
+  [%expect
+    {|
+    (LParen (Int 1) (Builtin Add) (Int 10) (Builtin Mul) RParen (Builtin Map)
+     EOF)
+  |}]
 ;;
 
-let%test_unit "strings" =
+let%expect_test "strings" =
   let input = {|"hello there" map|} in
-  let tokens = [ Token.String "hello there"; Token.Builtin Map; Token.EOF ] in
-  let rec loop index lexer =
-    let new_lexer, token = next_token lexer in
-    let expected_token = List.nth tokens index in
-    match expected_token with
-    | Some t ->
-      [%test_result: Token.t] token ~expect:t;
-      loop (index + 1) new_lexer
-    | None -> ()
-  in
-  create input |> loop 0 |> ignore
+  let tokens = collect_tokens (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Token.t list] tokens));
+  [%expect {| ((String "hello there") (Builtin Map) EOF) |}]
 ;;
 
-let%test_unit "test_all_tokens" =
+let%expect_test "test_all_tokens" =
   let input =
     {|
   + - * / !
@@ -214,49 +207,13 @@ let%test_unit "test_all_tokens" =
   if end if else end
   |}
   in
-  let tokens =
-    [ Token.Builtin Add
-    ; Builtin Sub
-    ; Builtin Mul
-    ; Builtin Div
-    ; Builtin Not
-    ; Builtin GTE
-    ; Builtin GT
-    ; Builtin LTE
-    ; Builtin LT
-    ; Builtin NotEqual
-    ; Builtin Equal
-    ; Builtin And
-    ; Builtin Or
-    ; LParen
-    ; RParen
-    ; LCurly
-    ; RCurly
-    ; Comma
-    ; Int 5
-    ; Int 10
-    ; Int 20
-    ; String "hello there"
-    ; Builtin Map
-    ; Builtin Split
-    ; Builtin Filter
-    ; Builtin Reduce
-    ; If
-    ; End
-    ; If
-    ; Else
-    ; End
-    ; EOF
-    ]
-  in
-  let rec loop index lexer =
-    let new_lexer, token = next_token lexer in
-    let expected_token = List.nth tokens index in
-    match expected_token with
-    | Some t ->
-      [%test_result: Token.t] token ~expect:t;
-      loop (index + 1) new_lexer
-    | None -> ()
-  in
-  create input |> loop 0 |> ignore
+  let tokens = collect_tokens (create input) in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Token.t list] tokens));
+  [%expect
+    {|
+    ((Builtin Add) (Builtin Sub) (Builtin Mul) (Builtin Div) (Builtin Not)
+     (Builtin GTE) (Builtin GT) (Builtin LTE) (Builtin LT) (Builtin NotEqual)
+     (Builtin Equal) (Builtin And) (Builtin Or) LParen RParen LCurly RCurly Comma
+     (Int 5) (Int 10) (Int 20) (String "hello there") (Builtin Map)
+     (Builtin Split) (Builtin Filter) (Builtin Reduce) If End If Else End EOF) |}]
 ;;

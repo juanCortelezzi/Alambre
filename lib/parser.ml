@@ -49,7 +49,7 @@ and parse_arr p =
   loop p []
 ;;
 
-let get_ast p =
+let collect_ast p =
   let rec loop p ast =
     match parse_token p with
     | Ok (p, token) -> loop p (token :: ast)
@@ -57,4 +57,47 @@ let get_ast p =
     | Error e -> Error e
   in
   loop p []
+;;
+
+let%expect_test "parse_ints" =
+  let input = "1 2 3" in
+  let parser = create (Lexer.create input) in
+  let ast = collect_ast parser |> Result.ok_or_failwith in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Ast.t list] ast));
+  [%expect {| ((DataType (Int 1)) (DataType (Int 2)) (DataType (Int 3))) |}]
+;;
+
+let%expect_test "parse_strings" =
+  let input = {|"1" "2" "3" "100 200 300"|} in
+  let parser = create (Lexer.create input) in
+  let ast = collect_ast parser |> Result.ok_or_failwith in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Ast.t list] ast));
+  [%expect
+    {|
+      ((DataType (String 1)) (DataType (String 2)) (DataType (String 3))
+       (DataType (String "100 200 300"))) 
+  |}]
+;;
+
+let%expect_test "parse_builtins" =
+  let input = "+ - * / map or_else split" in
+  let parser = create (Lexer.create input) in
+  let ast = collect_ast parser |> Result.ok_or_failwith in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Ast.t list] ast));
+  [%expect
+    {|
+    ((Builtin Add) (Builtin Sub) (Builtin Mul) (Builtin Div) (Builtin Map)
+     (Builtin OrElse) (Builtin Split))
+  |}]
+;;
+
+let%expect_test "parse_fn" =
+  let input = "(+ 1 2)" in
+  let parser = create (Lexer.create input) in
+  let ast = collect_ast parser |> Result.ok_or_failwith in
+  Stdlib.print_endline (Sexp.to_string_hum ([%sexp_of: Ast.t list] ast));
+  [%expect
+    {|
+    ((DataType (Function ((Builtin Add) (DataType (Int 1)) (DataType (Int 2))))))
+  |}]
 ;;

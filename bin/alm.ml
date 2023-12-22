@@ -1,6 +1,6 @@
 open Base
 
-let usage = {|almrepl <program>|}
+let usage = {|almrepl <lexer|parser|repl> input|}
 let get_args () = Sys.get_argv () |> Array.to_list |> List.tl |> Option.value_exn
 
 let lexer_repl input =
@@ -18,14 +18,14 @@ let lexer_repl input =
 let parser_repl input =
   let open Alambre in
   let parser = Parser.create (Lexer.create input) in
-  let ast = Parser.get_ast parser |> Result.ok_or_failwith in
+  let ast = Parser.collect_ast parser |> Result.ok_or_failwith in
   sexp_of_list Ast.sexp_of_t ast |> Sexp.to_string_hum |> Stdlib.print_endline
 ;;
 
 let repl_repl input =
   let open Alambre in
   let parser = Parser.create (Lexer.create input) in
-  Executor.create (Parser.get_ast parser |> Result.ok_or_failwith)
+  Executor.create (Parser.collect_ast parser |> Result.ok_or_failwith)
   |> Executor.run
   |> ignore
 ;;
