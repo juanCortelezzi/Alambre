@@ -18,13 +18,26 @@ let rec run t =
        | Builtin b ->
          execute_builtin t.stack b
          |> Result.map ~f:(fun stack -> { t with stack; index = t.index + 1 })
-       | _ -> failwith "Ast token not implemented")
+       | Expression e ->
+         execute_expression t.stack e
+         |> Result.map ~f:(fun stack -> { t with stack; index = t.index + 1 }))
   in
   match step t with
   | Ok t -> if t.index < List.length t.ast then run t else t
   | Error e ->
     alambre_status t.stack;
     failwith e
+
+and execute_expression stack expr =
+  match expr with
+  | If if_expression ->
+    (match stack with
+     | Bool b :: rest ->
+       if b
+       then Ok (run (create ~stack if_expression.consequence)).stack
+       else Ok (run (create ~stack if_expression.alternative)).stack
+     | _ :: _ -> Error "trying to use non boolean value for if expression"
+     | _ -> Error (Printf.sprintf "not enough elements in the stack for if expression"))
 
 and execute_builtin stack b =
   let error_not_enough_elements b =

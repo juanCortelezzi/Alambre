@@ -18,6 +18,8 @@ let lookup_keyword s =
   | "if" -> Some If
   | "else" -> Some Else
   | "end" -> Some End
+  | "true" -> Some (Bool true)
+  | "false" -> Some (Bool false)
   | _ -> None
 ;;
 
@@ -205,7 +207,8 @@ let%expect_test "test_all_tokens" =
   5 10 20
   "hello there"
   map split filter reduce
-  if end if else end
+  if else end
+  true false
   |}
   in
   let tokens = collect_tokens (create input) in
@@ -216,5 +219,7 @@ let%expect_test "test_all_tokens" =
      (Builtin GTE) (Builtin GT) (Builtin LTE) (Builtin LT) (Builtin NotEqual)
      (Builtin Equal) (Builtin And) (Builtin Or) LParen RParen LCurly RCurly Comma
      (Int 5) (Int 10) (Int 20) (String "hello there") (Builtin Map)
-     (Builtin Split) (Builtin Filter) (Builtin Reduce) If End If Else End EOF) |}]
+     (Builtin Split) (Builtin Filter) (Builtin Reduce) If Else End (Bool true)
+     (Bool false) EOF)
+  |}]
 ;;

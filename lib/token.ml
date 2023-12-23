@@ -3,6 +3,7 @@ open Base
 type t =
   | Int of int
   | String of string
+  | Bool of bool
   | Builtin of builtin
   | Illegal of string
   | LParen
@@ -73,6 +74,7 @@ let builtin_to_string b =
 let to_string t =
   match t with
   | Int i -> Int.to_string i
+  | Bool b -> Bool.to_string b
   | String s -> "'" ^ s ^ "'"
   | LParen -> "LParen"
   | RParen -> "RParen"
