@@ -56,6 +56,18 @@ and execute_builtin stack b =
      | Int a :: Int b :: rest -> Ok (alambre_sub a b :: rest)
      | _ :: _ :: _ -> Error "trying to sub something that should not be subbed"
      | _ -> Error (error_not_enough_elements b))
+  | Equal ->
+    (match stack with
+     | Int a :: Int b :: rest -> Ok (Bool (a = b) :: rest)
+     | String a :: String b :: rest -> Ok (Bool (String.equal a b) :: rest)
+     | Bool a :: Bool b :: rest -> Ok (Bool (Bool.equal a b) :: rest)
+     | _ :: _ :: rest -> Error "trying to equal something that should not be equalled"
+     | _ -> Error (error_not_enough_elements b))
+  | Not ->
+    (match stack with
+     | Bool a :: rest -> Ok (Bool (not a) :: rest)
+     | _ :: rest -> Error "trying to not something that should not be notted"
+     | _ -> Error (error_not_enough_elements b))
   | Split ->
     (match stack with
      | String on :: String s :: rest -> Ok (alambre_split s (Char.of_string on) :: rest)
