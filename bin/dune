@@ -1,6 +1,0 @@
-(executables
- (public_names alm)
- (names alm)
- (libraries alambre base)
- (flags
-  (:standard -w -37-69-32-33)))
