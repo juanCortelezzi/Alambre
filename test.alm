@@ -1,0 +1,51 @@
+
+{"1", "juan", "3"} (to_int 0 or_else 1 add) map status
+
+juan :: { age: 22, name: "juan", gives_a_fuck: false};
+juan := { age: 22, name: "juan", gives_a_fuck: false};
+juan = { age: 22, name: "juan", gives_a_fuck: false};
+
+
+// input: 
+// 1abc2
+// pqr3stu8vwx
+// a1b2c3d4e5f
+// treb7uchet
+
+"\n" split (chars (to_int) map (is_some) filter first unwrap 10 * swap last unwrap swap drop +) map 0 (+) reduce
+
+// input:
+// 1000
+// 2000
+// 3000
+//
+// 4000
+//
+// 5000
+// 6000
+//
+// 7000
+// 8000
+// 9000
+//
+// 10000
+
+"\n\n" split // s: {"1000\n2000\n3000", "4000", "5000\n6000", "7000\n8000\n9000", "10000"}
+
+(
+  " " split (to_int) map flatten // {1000, 2000, 3000}
+  0 (+) reduce // 1000 + 2000 + 3000 = 6000
+) map // s: {6000, 4000, 11000, 24000, 10000}
+
+0 (
+  // s: val, acc
+  tuck // s: val, acc, val
+  tuck // s: val, acc, val, acc
+  >    // s: val, acc, boolean
+  if // s: val, acc
+    drop // s: val
+  end
+) reduce
+
+"\n\n" split (" " split (to_int) map flatten 0 (+) reduce map 0 (tuck tuck > if drop end) reduce
+
