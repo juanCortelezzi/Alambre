@@ -7,19 +7,34 @@ const LexerErr = error{
 };
 
 pub const Lexer = struct {
-    str: []const u8,
-    cur: u8,
+    allocator: std.mem.Allocator,
+
+    tokens: std.ArrayList(Token),
+    src: []const u8,
     read_pos: usize,
+    cur: u8,
     col: usize,
     row: usize,
 
-    pub fn init(str: []const u8) Lexer {
+    pub fn init(allocator: std.mem.Allocator, str: []const u8) Lexer {
         assert(str.len > 0);
-        return Lexer{ .str = str, .read_pos = 1, .col = 0, .row = 0, .cur = str[0] };
+        return Lexer{
+            .allocator = allocator,
+            .tokens = std.ArrayList(Token).init(allocator),
+            .src = str,
+            .read_pos = 1,
+            .col = 0,
+            .row = 0,
+            .cur = str[0],
+        };
+    }
+
+    pub fn deinit(self: *Lexer) void {
+        self.tokens.deinit();
     }
 
     fn advance(self: *Lexer) void {
-        if (self.read_pos >= self.str.len) {
+        if (self.read_pos >= self.src.len) {
             self.cur = 0;
             return;
         }
@@ -31,16 +46,16 @@ pub const Lexer = struct {
             self.col += 1;
         }
 
-        self.cur = self.str[self.read_pos];
+        self.cur = self.src[self.read_pos];
         self.read_pos += 1;
     }
 
     fn peek_char(self: *Lexer) u8 {
-        if (self.read_pos >= self.str.len) {
+        if (self.read_pos >= self.src.len) {
             return 0;
         }
 
-        return self.str[self.read_pos];
+        return self.src[self.read_pos];
     }
 
     fn is_ascii_letter(c: u8) bool {
@@ -58,13 +73,13 @@ pub const Lexer = struct {
         var i: usize = 0;
         while (is_ascii_letter(self.cur) and i < upper_bound) : (i += 1) {
             self.advance();
+        } else {
+            if (i == upper_bound) {
+                @panic("too many characters in identifier");
+            }
         }
 
-        if (i == upper_bound) {
-            @panic("too many characters in identifier");
-        }
-
-        return self.str[read_pos - 1 .. self.read_pos - 1];
+        return self.src[read_pos - 1 .. self.read_pos - 1];
     }
 
     fn parse_digit(self: *Lexer) []const u8 {
@@ -74,13 +89,13 @@ pub const Lexer = struct {
         var i: usize = 0;
         while (is_ascii_digit(self.cur) and i < upper_bound) : (i += 1) {
             self.advance();
+        } else {
+            if (i == upper_bound) {
+                @panic("too many characters in digit");
+            }
         }
 
-        if (i == upper_bound) {
-            @panic("too many characters in digit");
-        }
-
-        return self.str[read_pos - 1 .. self.read_pos - 1];
+        return self.src[read_pos - 1 .. self.read_pos - 1];
     }
 
     fn parse_string(self: *Lexer) LexerErr![]const u8 {
@@ -90,14 +105,14 @@ pub const Lexer = struct {
         const read_pos = self.read_pos;
 
         var i: usize = 0;
-        while (i < self.str.len) : (i += 1) {
+        while (i < self.src.len) : (i += 1) {
             if (self.cur == '"') {
                 self.advance();
-                return self.str[read_pos - 1 .. self.read_pos - 2];
+                return self.src[read_pos - 1 .. self.read_pos - 2];
             }
 
-            if (self.cur == 0 or self.cur == '\n') {
-                break;
+            if (self.cur == '\n') {
+                return LexerErr.UnterminatedString;
             }
 
             self.advance();
@@ -115,8 +130,9 @@ pub const Lexer = struct {
             }
 
             self.advance();
+        } else {
+            @panic("too many characters in whitespace");
         }
-        @panic("too many characters in whitespace");
     }
 
     pub fn next_token(self: *Lexer) LexerErr!Token {
@@ -220,16 +236,33 @@ pub const Lexer = struct {
             else => Token{ .type = .Illegal, .row = self.row, .col = self.col, .literal = &[_]u8{self.cur} },
         };
 
-        if (token.type != .EOF or token.type != .Illegal) {
+        if (token.type != .EOF) {
             self.advance();
         }
 
         return token;
     }
+
+    pub fn get_tokens(self: *Lexer) LexerErr![]Token {
+        var index: usize = 0;
+        while (index < self.src.len) : (index += 1) {
+            const token = try self.next_token();
+            self.tokens.append(token) catch unreachable;
+            if (token.type == .EOF) {
+                break;
+            }
+        } else {
+            @panic("reached upper bound of token loop");
+        }
+
+        return self.tokens.items;
+    }
 };
 
-test "read char" {
-    var lexer = Lexer.init("+-*/");
+test "read_char" {
+    var lexer = Lexer.init(std.testing.allocator, "+-*/");
+    defer lexer.deinit();
+
     try std.testing.expectEqual('+', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(0, lexer.col);
@@ -255,8 +288,10 @@ test "read char" {
     try std.testing.expectEqual(3, lexer.col);
 }
 
-test "peek char" {
-    var lexer = Lexer.init("+-");
+test "peek_char" {
+    var lexer = Lexer.init(std.testing.allocator, "+-");
+    defer lexer.deinit();
+
     try std.testing.expectEqual('+', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(0, lexer.col);
@@ -273,8 +308,10 @@ test "peek char" {
     try std.testing.expectEqual(0, lexer.peek_char());
 }
 
-test "skip whitespace" {
-    var lexer = Lexer.init("   \t1\na\r\n z  \n9");
+test "skip_whitespace" {
+    var lexer = Lexer.init(std.testing.allocator, "   \t1\na\r\n z  \n9");
+    defer lexer.deinit();
+
     lexer.skip_whitespace();
     try std.testing.expectEqual('1', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
@@ -305,15 +342,17 @@ test "skip whitespace" {
     try std.testing.expectEqual(0, lexer.col);
 }
 
-test "single token" {
+test "single_token" {
     const input = "+";
-    var lexer = Lexer.init(input);
+    var lexer = Lexer.init(std.testing.allocator, input);
+    defer lexer.deinit();
+
     const tok = lexer.next_token();
     const expected = Token{ .type = .Plus, .row = 0, .col = 0, .literal = "+" };
     try std.testing.expectEqualDeep(expected, tok);
 }
 
-test "basic tokens" {
+test "basic_tokens" {
     const input =
         \\, : ( ) { } + - * / ! < >
         \\!= <= >= == && ||
@@ -342,7 +381,9 @@ test "basic tokens" {
         .{ .type = .EOF, .row = 1, .col = 16, .literal = "" },
     };
 
-    var lexer = Lexer.init(input);
+    var lexer = Lexer.init(std.testing.allocator, input);
+    defer lexer.deinit();
+
     for (expected_tokens) |expected| {
         const tok = try lexer.next_token();
         var bufa: [64]u8 = undefined;
@@ -351,7 +392,7 @@ test "basic tokens" {
     }
 }
 
-test "next token" {
+test "next_token" {
     const input =
         \\{"1", "juan bautista", "3"} (to_int 0 or_else 1 add) map
         \\status
@@ -397,11 +438,75 @@ test "next token" {
         .{ .type = .EOF, .row = 5, .col = 0, .literal = "" },
     };
 
-    var lexer = Lexer.init(input);
+    var lexer = Lexer.init(std.testing.allocator, input);
+    defer lexer.deinit();
+
     for (expected_tokens) |expected| {
         const tok = try lexer.next_token();
         var bufa: [64]u8 = undefined;
         var bufb: [64]u8 = undefined;
         try std.testing.expectEqualStrings(expected.to_string(&bufa), tok.to_string(&bufb));
+    }
+}
+
+test "get_tokens" {
+    const input =
+        \\{"1", "juan bautista", "3"} (to_int 0 or_else 1 add) map
+        \\status
+        \\+-<> >= <= == != && || !
+        \\69 420 +
+        \\"tumama"
+        \\:
+    ;
+
+    const expected_tokens = [_]Token{
+        .{ .type = .LSquiggly, .row = 0, .col = 0, .literal = "{" },
+        .{ .type = .String, .row = 0, .col = 1, .literal = "1" },
+        .{ .type = .Comma, .row = 0, .col = 4, .literal = "," },
+        .{ .type = .String, .row = 0, .col = 6, .literal = "juan bautista" },
+        .{ .type = .Comma, .row = 0, .col = 21, .literal = "," },
+        .{ .type = .String, .row = 0, .col = 23, .literal = "3" },
+        .{ .type = .RSquiggly, .row = 0, .col = 26, .literal = "}" },
+        .{ .type = .LParen, .row = 0, .col = 28, .literal = "(" },
+        .{ .type = .Ident, .row = 0, .col = 29, .literal = "to_int" },
+        .{ .type = .Number, .row = 0, .col = 36, .literal = "0" },
+        .{ .type = .Ident, .row = 0, .col = 38, .literal = "or_else" },
+        .{ .type = .Number, .row = 0, .col = 46, .literal = "1" },
+        .{ .type = .Ident, .row = 0, .col = 48, .literal = "add" },
+        .{ .type = .RParen, .row = 0, .col = 51, .literal = ")" },
+        .{ .type = .Ident, .row = 0, .col = 53, .literal = "map" },
+        .{ .type = .Ident, .row = 1, .col = 0, .literal = "status" },
+        .{ .type = .Plus, .row = 2, .col = 0, .literal = "+" },
+        .{ .type = .Minus, .row = 2, .col = 1, .literal = "-" },
+        .{ .type = .LessThan, .row = 2, .col = 2, .literal = "<" },
+        .{ .type = .GreaterThan, .row = 2, .col = 3, .literal = ">" },
+        .{ .type = .GreaterThanEqual, .row = 2, .col = 5, .literal = ">=" },
+        .{ .type = .LessThanEqual, .row = 2, .col = 8, .literal = "<=" },
+        .{ .type = .Equal, .row = 2, .col = 11, .literal = "==" },
+        .{ .type = .NotEqual, .row = 2, .col = 14, .literal = "!=" },
+        .{ .type = .And, .row = 2, .col = 17, .literal = "&&" },
+        .{ .type = .Or, .row = 2, .col = 20, .literal = "||" },
+        .{ .type = .Not, .row = 2, .col = 23, .literal = "!" },
+        .{ .type = .Number, .row = 3, .col = 0, .literal = "69" },
+        .{ .type = .Number, .row = 3, .col = 3, .literal = "420" },
+        .{ .type = .Plus, .row = 3, .col = 7, .literal = "+" },
+        .{ .type = .String, .row = 4, .col = 0, .literal = "tumama" },
+        .{ .type = .Colon, .row = 5, .col = 0, .literal = ":" },
+        .{ .type = .EOF, .row = 5, .col = 0, .literal = "" },
+    };
+
+    var lexer = Lexer.init(std.testing.allocator, input);
+    defer lexer.deinit();
+
+    const tokens = try lexer.get_tokens();
+    try std.testing.expectEqual(expected_tokens.len, tokens.len);
+
+    var i: usize = 0;
+    while (i < expected_tokens.len) : (i += 1) {
+        var bufa: [64]u8 = undefined;
+        var bufb: [64]u8 = undefined;
+        const expected = expected_tokens[i];
+        const got = tokens[i];
+        try std.testing.expectEqualStrings(expected.to_string(&bufa), got.to_string(&bufb));
     }
 }
