@@ -1,6 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const Lexer = @import("lexer.zig").Lexer;
+const Parser = @import("parser.zig").Parser;
 const ast = @import("ast.zig");
 
 pub fn main() !void {
@@ -23,11 +24,20 @@ pub fn main() !void {
         std.debug.print("{c}\n", .{c});
     }
 
-    var lexer = Lexer.init(allocator, program);
+    var lexerArena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer lexerArena.deinit();
+    const lexerArenaAllocator = lexerArena.allocator();
+
+    var lexer = Lexer.init(lexerArenaAllocator, program);
     defer lexer.deinit();
 
-    const node = ast.Node{ .row = 0, .col = 0, .type = .{ .Number = .{ .val = 1 } } };
-    _ = node;
+    var parserArena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer parserArena.deinit();
+    const parserArenaAllocator = parserArena.allocator();
+
+    const tokens = try lexer.getTokens();
+    var parser = Parser.init(parserArenaAllocator, tokens);
+    defer parser.deinit();
 }
 
 test {

@@ -6,13 +6,13 @@ pub const Token = struct {
     row: usize,
     col: usize,
 
-    pub fn to_string(self: Token, buf: []u8) []u8 {
-        return std.fmt.bufPrint(buf, "Token<{s}:{d}:{d}>('{s}')", .{
-            self.type.to_string(),
+    pub fn toString(self: Token, allocator: std.mem.Allocator) []u8 {
+        return std.fmt.allocPrint(allocator, "Token<{s}:{d}:{d}>('{s}')", .{
+            self.type.toString(),
             self.row,
             self.col,
             self.literal,
-        }) catch unreachable;
+        }) catch @panic("failed to allocate memory");
     }
 };
 
@@ -44,7 +44,7 @@ pub const TokenType = enum {
     And,
     Or,
     Not,
-    pub fn to_string(self: TokenType) []const u8 {
+    pub fn toString(self: TokenType) []const u8 {
         return switch (self) {
             .EOF => "EOF",
             .Illegal => "ILLEGAL",

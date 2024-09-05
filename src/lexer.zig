@@ -50,7 +50,7 @@ pub const Lexer = struct {
         self.read_pos += 1;
     }
 
-    fn peek_char(self: *Lexer) u8 {
+    fn peekChar(self: *Lexer) u8 {
         if (self.read_pos >= self.src.len) {
             return 0;
         }
@@ -58,20 +58,20 @@ pub const Lexer = struct {
         return self.src[self.read_pos];
     }
 
-    fn is_ascii_letter(c: u8) bool {
+    fn isAsciiLetter(c: u8) bool {
         return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or c == '_';
     }
 
-    fn is_ascii_digit(c: u8) bool {
+    fn isAsciiDigit(c: u8) bool {
         return c >= '0' and c <= '9';
     }
 
-    fn parse_ident(self: *Lexer) []const u8 {
+    fn parseIdent(self: *Lexer) []const u8 {
         const read_pos = self.read_pos;
 
         const upper_bound = 128;
         var i: usize = 0;
-        while (is_ascii_letter(self.cur) and i < upper_bound) : (i += 1) {
+        while (isAsciiLetter(self.cur) and i < upper_bound) : (i += 1) {
             self.advance();
         } else {
             if (i == upper_bound) {
@@ -82,12 +82,12 @@ pub const Lexer = struct {
         return self.src[read_pos - 1 .. self.read_pos - 1];
     }
 
-    fn parse_digit(self: *Lexer) []const u8 {
+    fn parseDigit(self: *Lexer) []const u8 {
         const read_pos = self.read_pos;
 
         const upper_bound = 64;
         var i: usize = 0;
-        while (is_ascii_digit(self.cur) and i < upper_bound) : (i += 1) {
+        while (isAsciiDigit(self.cur) and i < upper_bound) : (i += 1) {
             self.advance();
         } else {
             if (i == upper_bound) {
@@ -98,7 +98,7 @@ pub const Lexer = struct {
         return self.src[read_pos - 1 .. self.read_pos - 1];
     }
 
-    fn parse_string(self: *Lexer) LexerErr![]const u8 {
+    fn parseString(self: *Lexer) LexerErr![]const u8 {
         assert(self.cur == '"');
         self.advance();
 
@@ -121,7 +121,7 @@ pub const Lexer = struct {
         return LexerErr.UnterminatedString;
     }
 
-    fn skip_whitespace(self: *Lexer) void {
+    fn skipWhitespace(self: *Lexer) void {
         const upper_bound = 2048;
         var i: usize = 0;
         while (i < upper_bound) : (i += 1) {
@@ -135,20 +135,20 @@ pub const Lexer = struct {
         }
     }
 
-    pub fn next_token(self: *Lexer) LexerErr!Token {
-        self.skip_whitespace();
+    pub fn nextToken(self: *Lexer) LexerErr!Token {
+        self.skipWhitespace();
 
-        if (is_ascii_digit(self.cur)) {
+        if (isAsciiDigit(self.cur)) {
             const row = self.row;
             const col = self.col;
-            const digit = self.parse_digit();
+            const digit = self.parseDigit();
             return Token{ .type = .Number, .row = row, .col = col, .literal = digit };
         }
 
-        if (is_ascii_letter(self.cur)) {
+        if (isAsciiLetter(self.cur)) {
             const row = self.row;
             const col = self.col;
-            const ident = self.parse_ident();
+            const ident = self.parseIdent();
             return Token{ .type = .Ident, .row = row, .col = col, .literal = ident };
         }
 
@@ -166,7 +166,7 @@ pub const Lexer = struct {
             '!' => out: {
                 const col = self.col;
                 const row = self.row;
-                const peek = self.peek_char();
+                const peek = self.peekChar();
                 if (peek == '=') {
                     self.advance();
                     break :out Token{ .type = .NotEqual, .row = row, .col = col, .literal = "!=" };
@@ -176,7 +176,7 @@ pub const Lexer = struct {
             '<' => out: {
                 const col = self.col;
                 const row = self.row;
-                const peek = self.peek_char();
+                const peek = self.peekChar();
                 if (peek == '=') {
                     self.advance();
                     break :out Token{ .type = .LessThanEqual, .row = row, .col = col, .literal = "<=" };
@@ -186,7 +186,7 @@ pub const Lexer = struct {
             '>' => out: {
                 const col = self.col;
                 const row = self.row;
-                const peek = self.peek_char();
+                const peek = self.peekChar();
                 if (peek == '=') {
                     self.advance();
                     break :out Token{ .type = .GreaterThanEqual, .row = row, .col = col, .literal = ">=" };
@@ -196,7 +196,7 @@ pub const Lexer = struct {
             '=' => out: {
                 const col = self.col;
                 const row = self.row;
-                const peek = self.peek_char();
+                const peek = self.peekChar();
                 if (peek == '=') {
                     self.advance();
                     break :out Token{ .type = .Equal, .row = row, .col = col, .literal = "==" };
@@ -206,7 +206,7 @@ pub const Lexer = struct {
             '&' => out: {
                 const col = self.col;
                 const row = self.row;
-                const peek = self.peek_char();
+                const peek = self.peekChar();
                 if (peek == '&') {
                     self.advance();
                     break :out Token{ .type = .And, .row = row, .col = col, .literal = "&&" };
@@ -216,7 +216,7 @@ pub const Lexer = struct {
             '|' => out: {
                 const col = self.col;
                 const row = self.row;
-                const peek = self.peek_char();
+                const peek = self.peekChar();
                 if (peek == '|') {
                     self.advance();
                     break :out Token{ .type = .Or, .row = row, .col = col, .literal = "||" };
@@ -226,7 +226,7 @@ pub const Lexer = struct {
             '"' => {
                 const col = self.col;
                 const row = self.row;
-                const string = self.parse_string() catch |err| {
+                const string = self.parseString() catch |err| {
                     std.log.err("error parsing string: line {d} - position {d} - error '{any}'", .{ col, row, err });
                     std.process.exit(1);
                 };
@@ -243,11 +243,11 @@ pub const Lexer = struct {
         return token;
     }
 
-    pub fn get_tokens(self: *Lexer) LexerErr![]Token {
+    pub fn getTokens(self: *Lexer) LexerErr![]Token {
         var index: usize = 0;
         while (index < self.src.len) : (index += 1) {
-            const token = try self.next_token();
-            self.tokens.append(token) catch unreachable;
+            const token = try self.nextToken();
+            self.tokens.append(token) catch @panic("failed to append token");
             if (token.type == .EOF) {
                 break;
             }
@@ -259,7 +259,7 @@ pub const Lexer = struct {
     }
 };
 
-test "read_char" {
+test "advance" {
     var lexer = Lexer.init(std.testing.allocator, "+-*/");
     defer lexer.deinit();
 
@@ -295,48 +295,48 @@ test "peek_char" {
     try std.testing.expectEqual('+', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(0, lexer.col);
-    try std.testing.expectEqual('-', lexer.peek_char());
+    try std.testing.expectEqual('-', lexer.peekChar());
     lexer.advance();
     try std.testing.expectEqual('-', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(1, lexer.col);
-    try std.testing.expectEqual(0, lexer.peek_char());
+    try std.testing.expectEqual(0, lexer.peekChar());
     lexer.advance();
     try std.testing.expectEqual(0, lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(1, lexer.col);
-    try std.testing.expectEqual(0, lexer.peek_char());
+    try std.testing.expectEqual(0, lexer.peekChar());
 }
 
 test "skip_whitespace" {
     var lexer = Lexer.init(std.testing.allocator, "   \t1\na\r\n z  \n9");
     defer lexer.deinit();
 
-    lexer.skip_whitespace();
+    lexer.skipWhitespace();
     try std.testing.expectEqual('1', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(4, lexer.col);
-    lexer.skip_whitespace();
+    lexer.skipWhitespace();
     try std.testing.expectEqual('1', lexer.cur);
     try std.testing.expectEqual(0, lexer.row);
     try std.testing.expectEqual(4, lexer.col);
     lexer.advance();
-    lexer.skip_whitespace();
+    lexer.skipWhitespace();
     try std.testing.expectEqual('a', lexer.cur);
     try std.testing.expectEqual(1, lexer.row);
     try std.testing.expectEqual(0, lexer.col);
     lexer.advance();
-    lexer.skip_whitespace();
+    lexer.skipWhitespace();
     try std.testing.expectEqual('z', lexer.cur);
     try std.testing.expectEqual(2, lexer.row);
     try std.testing.expectEqual(1, lexer.col);
     lexer.advance();
-    lexer.skip_whitespace();
+    lexer.skipWhitespace();
     try std.testing.expectEqual('9', lexer.cur);
     try std.testing.expectEqual(3, lexer.row);
     try std.testing.expectEqual(0, lexer.col);
     lexer.advance();
-    lexer.skip_whitespace();
+    lexer.skipWhitespace();
     try std.testing.expectEqual(0, lexer.cur);
     try std.testing.expectEqual(3, lexer.row);
     try std.testing.expectEqual(0, lexer.col);
@@ -347,7 +347,7 @@ test "single_token" {
     var lexer = Lexer.init(std.testing.allocator, input);
     defer lexer.deinit();
 
-    const tok = lexer.next_token();
+    const tok = lexer.nextToken();
     const expected = Token{ .type = .Plus, .row = 0, .col = 0, .literal = "+" };
     try std.testing.expectEqualDeep(expected, tok);
 }
@@ -381,14 +381,17 @@ test "basic_tokens" {
         .{ .type = .EOF, .row = 1, .col = 16, .literal = "" },
     };
 
-    var lexer = Lexer.init(std.testing.allocator, input);
+    const allocator = std.testing.allocator;
+    var lexer = Lexer.init(allocator, input);
     defer lexer.deinit();
 
     for (expected_tokens) |expected| {
-        const tok = try lexer.next_token();
-        var bufa: [64]u8 = undefined;
-        var bufb: [64]u8 = undefined;
-        try std.testing.expectEqualStrings(expected.to_string(&bufa), tok.to_string(&bufb));
+        const tok = try lexer.nextToken();
+        const expected_str = expected.toString(allocator);
+        const got_str = tok.toString(allocator);
+        try std.testing.expectEqualStrings(expected_str, got_str);
+        allocator.free(expected_str);
+        allocator.free(got_str);
     }
 }
 
@@ -438,14 +441,17 @@ test "next_token" {
         .{ .type = .EOF, .row = 5, .col = 0, .literal = "" },
     };
 
-    var lexer = Lexer.init(std.testing.allocator, input);
+    const allocator = std.testing.allocator;
+    var lexer = Lexer.init(allocator, input);
     defer lexer.deinit();
 
     for (expected_tokens) |expected| {
-        const tok = try lexer.next_token();
-        var bufa: [64]u8 = undefined;
-        var bufb: [64]u8 = undefined;
-        try std.testing.expectEqualStrings(expected.to_string(&bufa), tok.to_string(&bufb));
+        const tok = try lexer.nextToken();
+        const expected_str = expected.toString(allocator);
+        const got_str = tok.toString(allocator);
+        try std.testing.expectEqualStrings(expected_str, got_str);
+        allocator.free(expected_str);
+        allocator.free(got_str);
     }
 }
 
@@ -495,18 +501,19 @@ test "get_tokens" {
         .{ .type = .EOF, .row = 5, .col = 0, .literal = "" },
     };
 
-    var lexer = Lexer.init(std.testing.allocator, input);
+    const allocator = std.testing.allocator;
+    var lexer = Lexer.init(allocator, input);
     defer lexer.deinit();
 
-    const tokens = try lexer.get_tokens();
+    const tokens = try lexer.getTokens();
     try std.testing.expectEqual(expected_tokens.len, tokens.len);
 
     var i: usize = 0;
     while (i < expected_tokens.len) : (i += 1) {
-        var bufa: [64]u8 = undefined;
-        var bufb: [64]u8 = undefined;
-        const expected = expected_tokens[i];
-        const got = tokens[i];
-        try std.testing.expectEqualStrings(expected.to_string(&bufa), got.to_string(&bufb));
+        const expected = expected_tokens[i].toString(allocator);
+        const got = tokens[i].toString(allocator);
+        try std.testing.expectEqualStrings(expected, got);
+        allocator.free(expected);
+        allocator.free(got);
     }
 }
