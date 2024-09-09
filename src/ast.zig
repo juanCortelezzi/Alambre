@@ -2,15 +2,13 @@ const std = @import("std");
 
 pub const Node = struct {
     type: NodeUnion,
-    row: usize,
-    col: usize,
     pub fn toString(self: *const Node, allocator: std.mem.Allocator) []const u8 {
         switch (self.type) {
             .Number => |n| return n.toString(allocator),
-            // .String => |s| return s.toString(allocator),
+            .String => |s| return s.toString(allocator),
             .BinOp => |b| return b.toString(allocator),
             // .Table => |t| return t.toString(allocator),
-            else => @panic("invalid node type"),
+            // else => @panic("invalid node type"),
         }
     }
 };
@@ -61,20 +59,20 @@ const String = struct {
 
 const BinOp = struct {
     op: BinOpType,
-    lhs: *const Node,
-    rhs: *const Node,
+    lhs: u32,
+    rhs: u32,
     fn toString(self: BinOp, allocator: std.mem.Allocator) []const u8 {
-        const lhs = self.lhs.toString(allocator);
-        const rhs = self.rhs.toString(allocator);
+        // const lhs = self.lhs.toString(allocator);
+        // const rhs = self.rhs.toString(allocator);
 
         const fstring = std.fmt.allocPrint(
             allocator,
-            "Binop<{s}>({s}, {s})",
-            .{ self.op.toString(), lhs, rhs },
+            "Binop<{s}>({}, {})",
+            .{ self.op.toString(), self.lhs, self.rhs },
         ) catch @panic("failed to allocate memory");
 
-        allocator.free(lhs);
-        allocator.free(rhs);
+        // allocator.free(lhs);
+        // allocator.free(rhs);
         return fstring;
     }
 };

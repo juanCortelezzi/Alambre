@@ -15,14 +15,13 @@ pub fn main() !void {
     // Skip the program name.
     assert(args.skip() == true);
 
-    const program = args.next() orelse {
-        std.debug.print("No program specified\n", .{});
-        std.process.exit(1);
-    };
-
-    for (program) |c| {
-        std.debug.print("{c}\n", .{c});
-    }
+    const program = args.next() orelse
+        \\1 2 +
+    ;
+    // {
+    //         // std.debug.print("No program specified\n", .{});
+    //         // std.process.exit(1);
+    //     };
 
     var lexerArena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer lexerArena.deinit();
@@ -38,6 +37,12 @@ pub fn main() !void {
     const tokens = try lexer.getTokens();
     var parser = Parser.init(parserArenaAllocator, tokens);
     defer parser.deinit();
+
+    const parsed_ast = parser.parse();
+
+    for (parsed_ast.program) |node| {
+        std.debug.print("node: {s}\n", .{node.toString(allocator)});
+    }
 }
 
 test {
