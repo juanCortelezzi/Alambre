@@ -53,7 +53,7 @@ pub const Parser = struct {
     fn parseNumber(self: *Parser) ?ParseErr {
         const tok = self.cur;
         const value = std.fmt.parseFloat(f64, tok.literal) catch {
-            return  ParseErr{
+            return ParseErr{
                 .type = ParserErrType.InvalidConversion,
                 .row = tok.row,
                 .col = tok.col,
@@ -65,20 +65,19 @@ pub const Parser = struct {
         const number = ast.Node{
             .type = .{ .Number = .{ .val = value } },
         };
-        
+
         self.program.append(number) catch @panic("failed to append node");
         self.indexes.append(@intCast(self.program.items.len - 1)) catch @panic("failed to append index");
-    return null;
-        
+        return null;
     }
 
     fn parseString(self: *Parser) ?ParseErr {
         const tok = self.cur;
         self.advance();
-            const string = ast.Node{
-                .type = .{ .String = .{ .val = tok.literal } },
-            };
-        
+        const string = ast.Node{
+            .type = .{ .String = .{ .val = tok.literal } },
+        };
+
         self.program.append(string) catch @panic("failed to append node");
         self.indexes.append(@intCast(self.program.items.len - 1)) catch @panic("failed to append index");
         return null;
@@ -87,25 +86,20 @@ pub const Parser = struct {
     fn parseBinOp(self: *Parser) ?ParseErr {
         const tok = self.cur;
         if (self.program.items.len < 2) {
-            return 
-                ParseErr{
-                    .type = ParserErrType.NotEnoughArguments,
-                    .row = tok.row,
-                    .col = tok.col,
+            return ParseErr{
+                .type = ParserErrType.NotEnoughArguments,
+                .row = tok.row,
+                .col = tok.col,
             };
         }
 
         const rhs_index = self.indexes.pop();
         const lhs_index = self.indexes.pop();
-        const rhs = self.program.items[rhs_index];
-        const lhs = self.program.items[lhs_index];
-
-        assert(lhs.type == .Number);
-        assert(rhs.type == .Number);
 
         const binop_type = switch (tok.type) {
             .Plus => ast.BinOpType.Add,
             .Minus => ast.BinOpType.Sub,
+            .Asterisk => ast.BinOpType.Multiply,
             else => @panic("invalid binop"),
         };
 
@@ -114,7 +108,7 @@ pub const Parser = struct {
         const binop = ast.Node{
             .type = .{ .BinOp = .{ .op = binop_type, .lhs = lhs_index, .rhs = rhs_index } },
         };
-        
+
         self.program.append(binop) catch @panic("failed to append node");
         self.indexes.append(@intCast(self.program.items.len - 1)) catch @panic("failed to append index");
         return null;
@@ -136,13 +130,11 @@ pub const Parser = struct {
             .NotEqual,
             .And,
             .Or,
-            .Not,
             => return self.parseBinOp(),
-            else => return 
-                ParseErr{
-                    .type = ParserErrType.InvalidToken,
-                    .row = self.cur.row,
-                    .col = self.cur.col,
+            else => return ParseErr{
+                .type = ParserErrType.InvalidToken,
+                .row = self.cur.row,
+                .col = self.cur.col,
             },
         }
 
@@ -166,11 +158,8 @@ pub const Parser = struct {
         // }
     }
 
-    pub fn parse(self: *Parser) struct {
-        program :[]ast.Node,
-        indexes :[]u32
-    } {
-        const upper_bound = 5;
+    pub fn parse(self: *Parser) struct { program: []ast.Node, indexes: []u32 } {
+        const upper_bound = self.tokens.len;
         var index: usize = 0;
         while (self.cur.type != .EOF and index < upper_bound) : (index += 1) {
             const nodeMaybe = self.parseExpression();
@@ -183,7 +172,7 @@ pub const Parser = struct {
             @panic("reached parser's upper bound");
         }
 
-        return .{.program= self.program.items, .indexes= self.indexes.items};
+        return .{ .program = self.program.items, .indexes = self.indexes.items };
     }
 };
 
@@ -257,16 +246,28 @@ test "parse_advanced" {
         .{ .type = .Number, .row = 0, .col = 0, .literal = "1" },
         .{ .type = .Number, .row = 0, .col = 2, .literal = "2" },
         .{ .type = .Plus, .row = 0, .col = 4, .literal = "+" },
+        .{ .type = .Number, .row = 0, .col = 6, .literal = "3" },
+        .{ .type = .Asterisk, .row = 0, .col = 8, .literal = "*" },
         .{ .type = .EOF, .row = 0, .col = 4, .literal = "" },
     };
 
     const expected_ast = [_]ast.Node{
-        ast.Node{ .type = .{ .Number = .{ .val = 1 }, }, },
-        ast.Node{ .type = .{ .Number = .{ .val = 2 }, }, },
-        ast.Node{ .type = .{ .BinOp = .{ .op = .Add, .lhs = 0, .rhs = 1 }, }, },
+        ast.Node{ .type = .{ .Number = .{ .val = 1 } } },
+        ast.Node{ .type = .{ .Number = .{ .val = 2 } } },
+        ast.Node{
+            .type = .{
+                .BinOp = .{ .op = .Add, .lhs = 0, .rhs = 1 },
+            },
+        },
+        ast.Node{ .type = .{ .Number = .{ .val = 3 } } },
+        ast.Node{
+            .type = .{
+                .BinOp = .{ .op = .Multiply, .lhs = 2, .rhs = 3 },
+            },
+        },
     };
 
-    const expected_ast_indexes = [_]u32{ 2 };
+    const expected_ast_indexes = [_]u32{4};
 
     var parser = Parser.init(allocator, &tokens);
     defer parser.deinit();

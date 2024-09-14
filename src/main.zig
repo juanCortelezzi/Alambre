@@ -16,7 +16,7 @@ pub fn main() !void {
     assert(args.skip() == true);
 
     const program = args.next() orelse
-        \\1 2 +
+        \\1 2 + 3 *
     ;
     // {
     //         // std.debug.print("No program specified\n", .{});

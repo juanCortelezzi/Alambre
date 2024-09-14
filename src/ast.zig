@@ -80,10 +80,12 @@ const BinOp = struct {
 pub const BinOpType = enum {
     Add,
     Sub,
+    Multiply,
     fn toString(self: BinOpType) []const u8 {
         return switch (self) {
             .Add => "Add",
             .Sub => "Sub",
+            .Multiply => "Multiply",
         };
     }
 };
