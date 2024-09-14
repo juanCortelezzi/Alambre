@@ -1,24 +1,18 @@
 const std = @import("std");
 
-pub const Node = struct {
-    type: NodeUnion,
-    pub fn toString(self: *const Node, allocator: std.mem.Allocator) []const u8 {
-        switch (self.type) {
-            .Number => |n| return n.toString(allocator),
-            .String => |s| return s.toString(allocator),
-            .BinOp => |b| return b.toString(allocator),
+pub const Node = union(enum) {
+    number: Number,
+    string: String,
+    binop: BinOp,
+    // Table,
+    pub fn toString(self: Node, allocator: std.mem.Allocator) []const u8 {
+        switch (self) {
+            .number => |n| return n.toString(allocator),
+            .string => |s| return s.toString(allocator),
+            .binop => |b| return b.toString(allocator),
             // .Table => |t| return t.toString(allocator),
-            // else => @panic("invalid node type"),
         }
     }
-};
-
-pub const NodeUnionTag = enum { Number, String, BinOp };
-const NodeUnion = union(NodeUnionTag) {
-    Number: Number,
-    String: String,
-    BinOp: BinOp,
-    // Table,
 };
 
 const Number = struct {
@@ -46,16 +40,12 @@ const String = struct {
 // const Table = struct {
 //     val: []const Node,
 // };
-//
-// const Fn = struct {
-//     name: ?[]const u8,
-//     params: []const Node,
-//     body: []const Node,
-// };
-//
-// const FnCall = struct {
-//     args: []const Node,
-// };
+
+const Fn = struct {
+    // name: ?[]const u8,
+    // params: []const Node,
+    body: []const Node,
+};
 
 const BinOp = struct {
     op: BinOpType,

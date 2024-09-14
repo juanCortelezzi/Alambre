@@ -62,9 +62,7 @@ pub const Parser = struct {
 
         self.advance();
 
-        const number = ast.Node{
-            .type = .{ .Number = .{ .val = value } },
-        };
+        const number = ast.Node{ .number = .{ .val = value } };
 
         self.program.append(number) catch @panic("failed to append node");
         self.indexes.append(@intCast(self.program.items.len - 1)) catch @panic("failed to append index");
@@ -75,7 +73,7 @@ pub const Parser = struct {
         const tok = self.cur;
         self.advance();
         const string = ast.Node{
-            .type = .{ .String = .{ .val = tok.literal } },
+            .string = .{ .val = tok.literal },
         };
 
         self.program.append(string) catch @panic("failed to append node");
@@ -106,7 +104,7 @@ pub const Parser = struct {
         self.advance();
 
         const binop = ast.Node{
-            .type = .{ .BinOp = .{ .op = binop_type, .lhs = lhs_index, .rhs = rhs_index } },
+            .binop = .{ .op = binop_type, .lhs = lhs_index, .rhs = rhs_index },
         };
 
         self.program.append(binop) catch @panic("failed to append node");
@@ -207,13 +205,13 @@ test "parse_basics" {
 
     const expected_ast = [_]ast.Node{
         ast.Node{
-            .type = .{ .Number = .{ .val = 0 } },
+            .number = .{ .val = 0 },
         },
         ast.Node{
-            .type = .{ .Number = .{ .val = 123 } },
+            .number = .{ .val = 123 },
         },
         ast.Node{
-            .type = .{ .String = .{ .val = "hello there" } },
+            .string = .{ .val = "hello there" },
         },
     };
 
@@ -252,19 +250,11 @@ test "parse_advanced" {
     };
 
     const expected_ast = [_]ast.Node{
-        ast.Node{ .type = .{ .Number = .{ .val = 1 } } },
-        ast.Node{ .type = .{ .Number = .{ .val = 2 } } },
-        ast.Node{
-            .type = .{
-                .BinOp = .{ .op = .Add, .lhs = 0, .rhs = 1 },
-            },
-        },
-        ast.Node{ .type = .{ .Number = .{ .val = 3 } } },
-        ast.Node{
-            .type = .{
-                .BinOp = .{ .op = .Multiply, .lhs = 2, .rhs = 3 },
-            },
-        },
+        ast.Node{ .number = .{ .val = 1 } },
+        ast.Node{ .number = .{ .val = 2 } },
+        ast.Node{ .binop = .{ .op = .Add, .lhs = 0, .rhs = 1 } },
+        ast.Node{ .number = .{ .val = 3 } },
+        ast.Node{ .binop = .{ .op = .Multiply, .lhs = 2, .rhs = 3 } },
     };
 
     const expected_ast_indexes = [_]u32{4};

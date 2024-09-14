@@ -36,6 +36,7 @@ pub const Lexer = struct {
     fn advance(self: *Lexer) void {
         if (self.read_pos >= self.src.len) {
             self.cur = 0;
+            self.read_pos = self.src.len + 1;
             return;
         }
 
@@ -149,6 +150,10 @@ pub const Lexer = struct {
             const row = self.row;
             const col = self.col;
             const ident = self.parseIdent();
+            if (std.mem.eql(u8, ident, "true") or std.mem.eql(u8, ident, "false")) {
+                return Token{ .type = .Boolean, .row = row, .col = col, .literal = ident };
+            }
+
             return Token{ .type = .Ident, .row = row, .col = col, .literal = ident };
         }
 
@@ -463,6 +468,7 @@ test "get_tokens" {
         \\69 420 +
         \\"tumama"
         \\:
+        \\true false
     ;
 
     const expected_tokens = [_]Token{
@@ -498,7 +504,9 @@ test "get_tokens" {
         .{ .type = .Plus, .row = 3, .col = 7, .literal = "+" },
         .{ .type = .String, .row = 4, .col = 0, .literal = "tumama" },
         .{ .type = .Colon, .row = 5, .col = 0, .literal = ":" },
-        .{ .type = .EOF, .row = 5, .col = 0, .literal = "" },
+        .{ .type = .Boolean, .row = 6, .col = 0, .literal = "true" },
+        .{ .type = .Boolean, .row = 6, .col = 5, .literal = "false" },
+        .{ .type = .EOF, .row = 6, .col = 9, .literal = "" },
     };
 
     const allocator = std.testing.allocator;
@@ -511,9 +519,11 @@ test "get_tokens" {
     var i: usize = 0;
     while (i < expected_tokens.len) : (i += 1) {
         const expected = expected_tokens[i].toString(allocator);
+        defer allocator.free(expected);
+
         const got = tokens[i].toString(allocator);
+        defer allocator.free(got);
+
         try std.testing.expectEqualStrings(expected, got);
-        allocator.free(expected);
-        allocator.free(got);
     }
 }

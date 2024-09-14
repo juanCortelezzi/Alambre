@@ -23,6 +23,7 @@ pub const TokenType = enum {
     Ident,
     Number,
     String,
+    Boolean,
 
     Comma,
     Colon,
@@ -51,6 +52,7 @@ pub const TokenType = enum {
             .Ident => "IDENT",
             .Number => "NUMBER",
             .String => "STRING",
+            .Boolean => "BOOLEAN",
             .Comma => "COMMA",
             .Colon => "COLON",
             .LParen => "LPAREN",
