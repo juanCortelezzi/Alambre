@@ -240,49 +240,47 @@ func (p *Parser) parseFn() (ast.Node, error) {
 }
 
 func (p *Parser) parseExpression() (ast.Node, error) {
-	for {
-		t := p.currToken
+	t := p.currToken
 
-		switch t.Type {
-		case token.Number:
-			node, err := p.parseNumber()
-			return node, err
+	switch t.Type {
+	case token.Number:
+		node, err := p.parseNumber()
+		return node, err
 
-		case token.String:
-			node := p.parseString()
-			return node, nil
+	case token.String:
+		node := p.parseString()
+		return node, nil
 
-		case token.LSquiggly:
-			node, err := p.parseTable()
-			return node, err
+	case token.LSquiggly:
+		node, err := p.parseTable()
+		return node, err
 
-		case token.LParen:
-			node, err := p.parseFn()
-			return node, err
+	case token.LParen:
+		node, err := p.parseFn()
+		return node, err
 
-		case token.Ident:
-			node, err := p.parseIdent()
-			return node, err
+	case token.Ident:
+		node, err := p.parseIdent()
+		return node, err
 
-		case token.Plus,
-			token.Minus,
-			token.Asterisk,
-			token.Slash,
-			token.LessThan,
-			token.LessThanEqual,
-			token.GreaterThan,
-			token.GreaterThanEqual,
-			token.Equal,
-			token.NotEqual,
-			token.And,
-			token.Or,
-			token.Not:
-			node := p.parseBinop()
-			return node, nil
+	case token.Plus,
+		token.Minus,
+		token.Asterisk,
+		token.Slash,
+		token.LessThan,
+		token.LessThanEqual,
+		token.GreaterThan,
+		token.GreaterThanEqual,
+		token.Equal,
+		token.NotEqual,
+		token.And,
+		token.Or,
+		token.Not:
+		node := p.parseBinop()
+		return node, nil
 
-		default:
-			return nil, fmt.Errorf("%w: token '%s' at pos '%d:%d'", ErrInvalidToken, t.Literal, t.Row, t.Col)
-		}
+	default:
+		return nil, fmt.Errorf("%w: token '%s' at pos '%d:%d'", ErrInvalidToken, t.Literal, t.Row, t.Col)
 	}
 }
 
