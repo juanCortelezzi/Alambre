@@ -16,7 +16,7 @@ pub fn main() !void {
     assert(args.skip() == true);
 
     const program = args.next() orelse
-        \\1 2 + 3 *
+        \\{ 1, 2 }
     ;
     // {
     //         // std.debug.print("No program specified\n", .{});
@@ -41,7 +41,7 @@ pub fn main() !void {
     const parsed_ast = parser.parse();
 
     for (parsed_ast.program) |node| {
-        std.debug.print("node: {s}\n", .{node.toString(allocator)});
+        std.debug.print("node: {s}\n", .{node.toString(allocator) catch @panic("failed to stringify ast")});
     }
 }
 

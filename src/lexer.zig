@@ -70,14 +70,13 @@ pub const Lexer = struct {
     fn parseIdent(self: *Lexer) []const u8 {
         const read_pos = self.read_pos;
 
-        const upper_bound = 128;
         var i: usize = 0;
-        while (isAsciiLetter(self.cur) and i < upper_bound) : (i += 1) {
-            self.advance();
-        } else {
-            if (i == upper_bound) {
+        const upper_bound = 128;
+        while (isAsciiLetter(self.cur)) : (i += 1) {
+            if (i >= upper_bound) {
                 @panic("too many characters in identifier");
             }
+            self.advance();
         }
 
         return self.src[read_pos - 1 .. self.read_pos - 1];
@@ -86,14 +85,13 @@ pub const Lexer = struct {
     fn parseDigit(self: *Lexer) []const u8 {
         const read_pos = self.read_pos;
 
-        const upper_bound = 64;
         var i: usize = 0;
-        while (isAsciiDigit(self.cur) and i < upper_bound) : (i += 1) {
-            self.advance();
-        } else {
+        const upper_bound = 64;
+        while (isAsciiDigit(self.cur)) : (i += 1) {
             if (i == upper_bound) {
                 @panic("too many characters in digit");
             }
+            self.advance();
         }
 
         return self.src[read_pos - 1 .. self.read_pos - 1];
@@ -123,8 +121,8 @@ pub const Lexer = struct {
     }
 
     fn skipWhitespace(self: *Lexer) void {
-        const upper_bound = 2048;
         var i: usize = 0;
+        const upper_bound = 2048;
         while (i < upper_bound) : (i += 1) {
             if (!std.ascii.isWhitespace(self.cur)) {
                 return;
